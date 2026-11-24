@@ -1,7 +1,7 @@
 # BulutSkan arxitekturasi
 
-> **Holat:** 1-bosqich, loyiha rejasi. Kod hali yozilmagan.
-> ⚠ belgisi qo‘yilgan joylar `Sinov` papkasidagi materiallarga (`analyze.py`, `stats3.py`, `ground_truth.csv`, `config.ps1`, `tool_digests.txt`) bog‘liq. Ular o‘qib chiqilgach, bu joylar aniqlashtiriladi.
+> **Holat:** 2-bosqich bajarildi: yagona model, parserlar, konsensus, EOL va AHP yozilgan va testlangan.
+> 1-bosqichda ⚠ bilan belgilangan joylar `Sinov` materiallari (`analyze.py`, `stats3.py`, `ground_truth.csv`, `run_tests.ps1`, `tool_digests.txt`, `ahp/`) asosida aniqlashtirildi.
 
 BulutSkan — bulutli infratuzilma kodini (IaC) va konteyner obrazlarini bir nechta ochiq kodli skaner bilan tekshiradigan mahalliy veb-platforma. U Andijon davlat universiteti magistranti Odilova Robiyaxonning “Bulutli hisoblash texnologiyalari xavfsizligini ta’minlovchi dasturiy vositalarni qiyosiy tahlil qilish va ochiq kodli vositalar samaradorligini baholash” mavzusidagi dissertatsiyasining amaliy natijasidir.
 
@@ -139,6 +139,9 @@ BulutSkan/
 │   │   ├── tool_digests.txt     # Sinov\natijalar dan nusxa
 │   │   ├── checkov.Dockerfile   # Sinov dan nusxa
 │   │   ├── ground_truth.csv     # Sinov dan nusxa
+│   │   ├── ahp.json             # Sinov\ahp: matritsa A, xos vektor w
+│   │   ├── ahp_upd.json         # Sinov\ahp: ballar S2, sezgirlik natijalari
+│   │   ├── iac/                 # Sinov\iac: insecure va secure test fayllari
 │   │   └── eol.json             # ichki EOL ro‘yxati
 │   └── web/
 │       ├── app.py               # FastAPI fabrikasi, middleware’lar
@@ -149,10 +152,12 @@ BulutSkan/
 │       ├── routes/              # dashboard, iac, image, scans, compare, ahp, tools
 │       ├── templates/           # base.html, sahifalar, partials/
 │       └── static/              # css/, js/, icons/, vendor/ (htmx, Chart.js)
-├── demo/iac/{insecure,secure}/  # Sinov\iac dan nusxa
+├── demo/sinov/
+│   ├── natijalar/               # Sinov\natijalar: real JSON hisobotlar (testlar va demo-import uchun)
+│   │   └── tahlil/              # ch3.json, summary.json: testlar uchun kutilgan natijalar
+│   └── skriptlar/               # asl skriptlar (analyze.py, stats3.py, run_tests.ps1 ...), faqat ma’lumot uchun
 ├── tests/
-│   ├── conftest.py
-│   ├── fixtures/natijalar/      # Sinov\natijalar dagi real JSON hisobotlar
+│   ├── conftest.py              # demo/sinov dagi hisobotlarni fixture sifatida yuklaydi
 │   └── test_*.py
 ├── ci/
 │   ├── github-actions.yml       # namuna
@@ -181,7 +186,7 @@ data/
 └── hisobotlar/{scan_uid}/       # xom JSON hisobotlar, DOCX
 ```
 
-`Sinov` papkasidagi fayllar o‘zgartirilmaydi. Kerakli fayllar repozitoriyga nusxa sifatida olinadi (`resources/`, `tests/fixtures/`, `demo/`).
+`Sinov` papkasidagi fayllar o‘zgartirilmaydi. Kerakli fayllar repozitoriyga nusxa sifatida olinadi: platforma ishlashi uchun zarur kichik fayllar `bulutskan/resources/` ga, real hisobotlar (59 MB) `demo/sinov/natijalar/` ga. Hisobotlarning bitta nusxasi ham testlar, ham `demo-import` uchun xizmat qiladi. Har bir obraz uchun faqat `run1` olingan: uchta takror natijasi bir xil chiqqan.
 
 ## 5. Tekshiruv jarayonlari
 
@@ -320,9 +325,9 @@ Talab qilingan to‘qqizta maydonga konsensus, hisobot va solishtirish uchun ker
 | `primary_url` | str \| None | Qoida yoki CVE havolasi |
 | `fingerprint` | str | Takrorlarni aniqlash kaliti (6.4-bo‘lim) |
 
-### 6.2. Manba maydonlari ⚠
+### 6.2. Manba maydonlari
 
-Jadval vositalarning JSON tuzilmasiga asoslangan. Aniq mantiq `analyze.py` dan olinadi.
+Mantiq `analyze.py` va `stats3.py` dan ko‘chirilgan. Fayl yo‘llari vositalarda turlicha (Checkov `/iac/x.tf`, KICS `../../iac/x.tf`, Trivy `x.tf`), shuning uchun parserlar ularni tekshiruv ildiziga nisbatan bir xil yo‘lga keltiradi (`canonical_path`). Checkov uchun `file_abs_path` ishlatiladi. KICS uchun `search_key` va `resource_name` alohida saqlanadi: ground truth tokeni ikkalasida ham qidiriladi.
 
 | Maydon | Checkov | KICS | Trivy config | Trivy image | Grype |
 |---|---|---|---|---|---|
@@ -336,7 +341,7 @@ Jadval vositalarning JSON tuzilmasiga asoslangan. Aniq mantiq `analyze.py` dan o
 | `status` | `FAILED` | — | `Status` | `Status` | `vulnerability.fix.state` |
 | qatorlar | `file_line_range` | `files[].line` | `CauseMetadata.StartLine/EndLine` | — | — |
 
-### 6.3. Normallashtirish ⚠
+### 6.3. Normallashtirish
 
 Jiddiylik darajalari:
 
@@ -350,7 +355,7 @@ Jiddiylik darajalari:
 | INFO, TRACE (KICS) | INFO |
 | `null`, Unknown, bo‘sh | UNKNOWN |
 
-Grype’ning Negligible darajasini LOW ga tenglash Trivy bilan bir xil shkala beradi: Trivy Debian’ning “negligible” baholarini LOW sifatida ko‘rsatadi. `analyze.py` boshqacha yo‘l tutgan bo‘lsa, o‘sha mantiq olinadi.
+Grype’ning Negligible darajasi LOW ga tenglanadi. `analyze.py` ham uni LOW ustuniga qo‘shib sanaydi (`LOW + NEGLIGIBLE`).
 
 Checkov’ning ochiq kodli versiyasi ko‘pincha `severity: null` qaytaradi. Platforma bu qiymatni to‘qib chiqarmaydi va UNKNOWN deb saqlaydi. Konsensus guruhida esa guruhning jiddiyligi a’zolarning ma’lum bo‘lgan eng yuqori darajasi bo‘ladi. Masalan, Checkov va KICS bir xatoni topsa, guruh KICS darajasini oladi. Bu daraja interfeysda “guruh bo‘yicha” deb belgilanadi.
 
@@ -366,7 +371,7 @@ Holat (`status`):
 
 IaC bo‘yicha faqat muvaffaqiyatsiz tekshiruvlar topilma sifatida saqlanadi. O‘tgan tekshiruvlar soni `ToolRun` statistikasida qoladi.
 
-CVE normallashtirish (`stats3.py` asosida ⚠): ID katta harfga keltiriladi. GHSA identifikatori Grype’ning `relatedVulnerabilities` ro‘yxati orqali CVE ga almashtiriladi. CVE topilmasa, GHSA o‘zi kalit bo‘lib qoladi.
+CVE normallashtirish (`stats3.cve`): ID katta harfga keltiriladi. `CVE-` bilan boshlansa, o‘zi kalit bo‘ladi. Grype’da GHSA identifikatori `relatedVulnerabilities` ro‘yxatidagi birinchi CVE ga almashtiriladi. Trivy uchun faqat `VulnerabilityID` olinadi. CVE topilmasa, asl ID (GHSA, TEMP, DLA) kalit bo‘lib qoladi. Tuzatish mavjudligi Trivy’da `FixedVersion` bo‘sh emasligi, Grype’da `fix.state == "fixed"` bilan aniqlanadi.
 
 ### 6.4. Takrorlarni birlashtirish
 
@@ -392,18 +397,30 @@ Bir xil kalitli yozuvlar bitta topilmaga aylanadi, joylashuvlari esa ro‘yxat b
 
 $$J(T, G) = \frac{|T \cap G|}{|T \cup G|}$$
 
-Ikkala to‘plam bo‘sh bo‘lsa, koeffitsient “aniqlanmagan” deb ko‘rsatiladi ⚠. To‘plam elementi (faqat CVE yoki CVE + paket juftligi) `stats3.py` bilan bir xil bo‘ladi ⚠.
+To‘plam elementi — obrazdagi normallashtirilgan CVE kaliti (paketsiz), `stats3.py` dagi kabi. Ikkala to‘plam bo‘sh bo‘lsa, `stats3.py` 1,0 qaytaradi; platforma ham shunday qiladi. Bir nechta obraz bo‘yicha umumiy koeffitsient `(obraz, CVE)` juftliklari to‘plamida hisoblanadi.
+
+Qo‘shimcha ravishda **asosiy Jaccard** (`j_core`) ko‘rsatiladi. Unda Trivy’ning CVE bo‘lmagan ID lari va Grype’ning faqat CPE asosida topgan CVE lari chiqarib tashlanadi. III bobda bu ko‘rsatkich vositalar farqining qancha qismi metodologiyadan kelib chiqishini ko‘rsatadi.
+
+Tekshirish: 15 ta obrazning barchasida `t_n`, `g_n`, `common`, `only_t`, `only_g`, `j`, `j_core`, `g_cpe`, `t_fix`, `g_fix`, kritik va yuqori darajalar `ch3.json` bilan bir xil chiqadi. Umumiy J = 0,767 (`test_consensus.py`).
 
 ### 7.2. IaC topilmalari
 
 Turli vositalarning qoida ID lari bir-biriga to‘g‘ridan-to‘g‘ri mos kelmaydi. Checkov’da `CKV_AWS_20`, KICS’da UUID, Trivy’da `AVD-AWS-0086`. Shu sababli moslashtirish xato toifasi bo‘yicha bajariladi:
 
-1. `ground_truth.csv` dan toifalar va har bir vosita uchun regex qoidalari o‘qiladi ⚠.
-2. Har bir topilmaning `rule_id` va `title` maydonlari regexlarga solishtiriladi va topilmaga `category` beriladi.
-3. Guruh kaliti: `fayl + toifa` ⚠ (resurs darajasida kerak bo‘lsa `fayl + resurs + toifa`).
-4. Kamida ikkita vosita topgan guruh → **Tasdiqlangan**. Bitta vosita topgani → **Tekshirish talab etiladi**.
-5. Hech bir toifaga tushmagan topilma o‘z qoidasi bo‘yicha alohida guruhda qoladi va “Toifalanmagan” deb belgilanadi.
-6. Jaccard: har bir vosita juftligi uchun (Checkov–KICS, Checkov–Trivy, KICS–Trivy) va uchala vosita uchun umumiy:
+`ground_truth.csv` ning har bir qatori — bitta xato (40 ta: TF-01..TF-20, K8S-01..K8S-13, DF-01..DF-07). Qatorda xatoli va xavfsiz fayl, resurs tokeni (`tf02_bucket`), regex va istisno regexi bor. Regex `rule_id + " " + title` matniga (kichik harflarda) qo‘llanadi.
+
+Platformada ikki rejim bor:
+
+- **Ground truth bo‘yicha baholash** (`evaluate_ground_truth`). `analyze.py` ning IaC qismi aynan ko‘chirilgan: fayl, regex, istisno va resurs tokeni tekshiriladi, Terraform qatorlari blok nomiga bog‘lanadi. Natija — har bir vosita uchun TP, FP, recall, precision, F1 va juftliklar Jaccard’i. Namoyish fayllarida `summary.json` bilan to‘liq mos: Checkov 36/40, KICS 34/40, Trivy 32/40, Jaccard 0,842 / 0,838 / 0,784.
+- **Ixtiyoriy fayllar uchun toifalash** (`categorize`). Foydalanuvchi faylida GT tokenlari yo‘q. Shu sababli fayl oilasi (Terraform, Kubernetes, Dockerfile) bo‘yicha xuddi shu regex va istisnolar qo‘llanadi. Tokenli qoidalar uchun token o‘rniga resurs turi tekshiriladi. Tur namoyish faylidan olinadi: `tf09_rds` → `aws_db_instance`, demak TF-10 (RDS shifrlash) faqat `aws_db_instance` bloklariga qo‘llanadi. Prefiks bo‘yicha solishtiriladi, shuning uchun `aws_s3_bucket` qoidasi `aws_s3_bucket_acl` ga ham tegadi. Bu rejim namoyish fayllarida ground truth bilan aynan bir xil toifalarni topadi (`test_categories.py`).
+
+Konsensus:
+
+1. Har bir topilmaga mos toifalar aniqlanadi. `Finding.category` ga birinchisi yoziladi.
+2. Guruh kaliti: `fayl + toifa`. Bitta topilma bir nechta toifaga tushishi mumkin (`analyze.py` dagi kabi).
+3. Kamida ikkita vosita topgan guruh → **Tasdiqlangan**. Bitta vosita topgani → **Tekshirish talab etiladi**.
+4. Hech bir toifaga tushmagan topilma o‘z qoidasi bo‘yicha alohida guruhda qoladi va “Toifalanmagan” deb belgilanadi. U Jaccard hisobiga kirmaydi.
+5. Jaccard: har bir vosita juftligi uchun (Checkov–KICS, Checkov–Trivy, KICS–Trivy) va uchala vosita uchun umumiy. Ikkala to‘plam bo‘sh bo‘lsa 0 (`analyze.py` dagi kabi):
 
 $$J(A, B, C) = \frac{|A \cap B \cap C|}{|A \cup B \cup C|}$$
 
@@ -480,7 +497,11 @@ $$w_i' = \frac{w_i \cdot m_i}{\sum_k w_k \cdot m_k}$$
 
 Foydalanuvchi slayderlar bilan har bir vaznni 0 dan 1 gacha o‘zgartiradi. Vaznlar avtomatik normallashtiriladi, reyting jadval va Chart.js ustunli diagrammasida darhol yangilanadi (HTMX).
 
-II bobdagi vaznlar yig‘indisi 1,0002 ga teng, farq yaxlitlashdan kelib chiqqan. Bazaviy ssenariy vaznlarni o‘zgartirmasdan ishlatadi. Shu kiritilgan qiymatlardan hisoblangan nazorat ballari (testlarda ishlatiladi): Checkov 3,8752; Trivy 3,8182; Grype 3,7042; Prowler 3,5294; KICS 3,4834; Wiz 3,1486; Cortex Cloud 3,1486; MS Defender for Cloud 3,0576. Bu ballar dissertatsiyadagi jadval bilan solishtirib tasdiqlanishi kerak ⚠.
+9.1-jadvaldagi vaznlar to‘rt xonagacha yaxlitlangan (yig‘indisi 1,0002). Hisobda ular emas, `resources/ahp.json` dagi `w` ishlatiladi: xos vektor usulida olingan aniq vaznlar, yig‘indisi 1,0. Ballar `resources/ahp_upd.json` dagi `S2` dan olinadi. Natija 3.9-jadvalga mos (3 xonagacha): Checkov 3,874; Trivy 3,817; Grype 3,704; Prowler 3,529; KICS 3,483; Wiz va Cortex Cloud 3,148; MS Defender for Cloud 3,057.
+
+Modul `ahp.json` dagi juftlik taqqoslash matritsasidan (`A`) bosh xos vektorni daraja usuli bilan qayta hisoblaydi. U `w` bilan 10⁻¹⁵ aniqlikda mos keladi. Muvofiqlik: λ_max = 7,042; CI = 0,0070; CR = 0,0053 < 0,1.
+
+Sezgirlik tahlili: har bir mezon vazni ×0,5 va ×1,5 ga o‘zgartiriladi. Yetakchilar ro‘yxati va “birinchi uchlik tarkibi o‘zgarmagan” holatlar soni (14 tadan 13 tasi) `ahp_upd.json` bilan bir xil.
 
 ## 10. Ma’lumotlar bazasi
 
@@ -600,7 +621,7 @@ Veb-so‘rov skanerni kutmaydi. Tekshiruv `ThreadPoolExecutor(max_workers=1)` as
 
 | Tahdid | Chora | Modul |
 |---|---|---|
-| Skaner yoki uning bazasi buzilgan (ta’minot zanjiri hujumi) | Vosita faqat `repo@sha256:...` orqali chaqiriladi, ishga tushishda digest tekshiriladi, `--pull never` | `scanner.tools`, `scanner.docker` |
+| Skaner yoki uning bazasi buzilgan (ta’minot zanjiri hujumi). Real misollar `config.ps1` da qayd etilgan: Trivy 0.69.4–0.69.6 zararli relizlari (CVE-2026-33634) va 2026-yil 22-aprelda KICS teglarining zararli obrazlarga almashtirilishi | Vosita faqat `repo@sha256:...` orqali chaqiriladi, ishga tushishda digest tekshiriladi, `--pull never` | `scanner.tools`, `scanner.docker` |
 | Skaner ma’lumotni tashqariga yuboradi | `--network none`, telemetriya va yangilanish tekshiruvi bayroqlari o‘chiriladi | `scanner.docker` |
 | Skaner xostni buzadi | `--read-only`, `--cap-drop ALL`, `no-new-privileges`, CPU/xotira/PID limitlari, `docker.sock` ulanmaydi | `scanner.docker` |
 | Maxfiy ma’lumot konteynerga o‘tadi | Konteynerga faqat aniq qiymatli `--env` beriladi, xost muhiti uzatilmaydi, `--env-file` ishlatilmaydi | `scanner.docker` |
@@ -631,7 +652,7 @@ docker run --rm --pull never
   --env HOME=/tmp
   --env HTTP_PROXY= --env HTTPS_PROXY= --env NO_PROXY=
   --mount type=bind,source={workdir}/input,target=/scan,readonly
-  --mount type=bind,source={data}/db/trivy,target=/db,readonly     # faqat Trivy va Grype
+  --mount type=bind,source={data}/db/trivy,target=/cache,readonly  # faqat Trivy va Grype
   aquasec/trivy@sha256:{digest}
   {vosita argumentlari}
 ```
@@ -644,15 +665,15 @@ Izohlar:
 - Timeout tugasa, konteyner `docker kill bulutskan-{uid}-{vosita}` bilan to‘xtatiladi.
 - Root bo‘lmagan foydalanuvchi (`--user`) har bir vosita bilan 3-bosqichda sinab ko‘riladi. Vosita shunday ishlay olsa, u yoqiladi.
 
-Vositalarga xos argumentlar (aniq ro‘yxat `config.ps1` bilan solishtiriladi ⚠):
+Vositalarga xos argumentlar eksperimentdagi `run_tests.ps1` dan aynan olinadi. Shunday qilinsa, platforma III bobdagi natijalarni takrorlaydi:
 
 | Vosita | Asosiy argumentlar |
 |---|---|
-| Trivy image | `image --input /input/image.tar --format json --scanners vuln --skip-db-update --skip-java-db-update --offline-scan --skip-version-check --cache-dir /db` |
-| Trivy config | `config --format json --skip-check-update --skip-version-check /scan` |
-| Grype | `docker-archive:/input/image.tar -o json`, muhit: `GRYPE_DB_CACHE_DIR=/db`, `GRYPE_DB_AUTO_UPDATE=false`, `GRYPE_CHECK_FOR_APP_UPDATE=false` |
-| Checkov | `-d /scan -o json --skip-download --quiet` |
-| KICS | `scan -p /scan -o /out --report-formats json --disable-full-descriptions --no-progress --ci` |
+| Trivy image | `image --cache-dir /cache --skip-db-update --skip-java-db-update --offline-scan --scanners vuln --format json --input /input/image.tar` |
+| Trivy config | `config --skip-check-update --format json /scan` |
+| Grype | `docker-archive:/input/image.tar -o json`, muhit: `GRYPE_DB_CACHE_DIR=/cache`, `GRYPE_DB_AUTO_UPDATE=false`, `GRYPE_CHECK_FOR_APP_UPDATE=false` |
+| Checkov | `-d /scan --skip-download --quiet -o json` |
+| KICS | `scan -p /scan -o /out --report-formats json --no-progress` |
 
 KICS natijani stdout ga emas, faylga yozadi. Shu sababli unga bitta istisno beriladi: `workdir/{uid}/out` katalogi yozish uchun ulanadi. Bu katalog bo‘sh holda ochiladi, faqat shu tekshiruvga tegishli va ish tugagach o‘chiriladi. `--disable-full-descriptions` KICS’ning tavsiflarni Checkmarx serveridan yuklashini o‘chiradi.
 
@@ -664,9 +685,10 @@ Yagona farqlar: tarmoq yoqilgan (`bridge`), proksi `--env HTTPS_PROXY={docker in
 
 ### 11.4. Digest yaxlitligi
 
-1. `resources/tool_digests.txt` dan vosita → digest jadvali o‘qiladi ⚠.
-2. Ishga tushishda har bir vosita uchun `docker image inspect` bajariladi. Registrdagi obrazlar (Trivy, Grype, KICS) uchun `RepoDigests` ichida aynan shu digest bo‘lishi, mahalliy yig‘ilgan Checkov uchun obraz `Id` si mos kelishi kerak.
-3. Natija:
+1. `resources/tool_digests.txt` dan vosita → digest jadvali o‘qiladi. Format: `aquasec/trivy:0.76.1  ->  aquasec/trivy@sha256:...` (UTF-8, BOM bilan).
+2. Ishga tushishda har bir vosita uchun `docker image inspect` bajariladi. Registrdagi obrazlar (Trivy, Grype, KICS) uchun `RepoDigests` ichida aynan shu digest bo‘lishi kerak.
+3. Checkov registrdan olinmaydi: u `checkov.Dockerfile` dan mahalliy yig‘iladi va `tool_digests.txt` da digesti yo‘q (`checkov (pip) == 3.3.26`). Mahalliy yig‘ish takrorlanuvchan emas, shuning uchun birinchi yig‘ishda obraz `Id` si `data/tool_lock.json` ga yoziladi (birinchi ishonch tamoyili, trust on first use). Keyingi har ishga tushishda shu `Id` tekshiriladi va Checkov `sha256:{Id}` orqali chaqiriladi.
+4. Natija:
    - **mos** — tekshiruvlar ruxsat etiladi;
    - **mos emas** — barcha tekshiruvlar bloklanadi, har bir sahifada qizil ogohlantirish chiqadi, CLI 2 kodi bilan chiqadi;
    - **obraz yo‘q** — tekshiruvlar bloklanadi, `bulutskan tools pull` buyrug‘i taklif qilinadi;
@@ -753,12 +775,13 @@ Barcha testlar Docker’siz o‘tadi. Docker chaqiruvlari `subprocess.run` ni al
 
 | Test fayli | Nimani tekshiradi | Ma’lumot |
 |---|---|---|
-| `test_parsers.py` | To‘rt vosita parserlari | `tests/fixtures/natijalar` dagi real JSON |
-| `test_normalize.py` | Jiddiylik, holat, GHSA → CVE | real JSON |
-| `test_consensus.py` | Belgilar, CPE belgisi, Jaccard | real JSON, `stats3.py` natijalari bilan solishtirish |
-| `test_categories.py` | IaC toifalash | `iac/run1` va `ground_truth.csv` |
+| `test_parsers.py` | To‘rt vosita parserlari: yozuvlar soni, darajalar, tuzatiladiganlar `summary.json` bilan | `demo/sinov/natijalar` dagi real JSON |
+| `test_normalize.py` | Jiddiylik, holat, GHSA → CVE, fayl yo‘llari | qo‘lda yozilgan misollar |
+| `test_dedup.py` | Takrorlarni birlashtirish | real JSON va misollar |
+| `test_consensus.py` | Belgilar, CPE belgisi, Jaccard: 15 obraz `ch3.json` bilan, IaC `summary.json` bilan | real JSON |
+| `test_categories.py` | GT baholash `summary.json` bilan, ixtiyoriy fayllar uchun toifalash | `iac/run1` va `ground_truth.csv` |
 | `test_eol.py` | EOL aniqlash | real Trivy/Grype JSON |
-| `test_ahp.py` | Ballar, ssenariylar, normallashtirish | 9-bo‘limdagi qiymatlar |
+| `test_ahp.py` | 3.9-jadval, xos vektor, CR, sezgirlik tahlili | `ahp.json`, `ahp_upd.json` |
 | `test_upload_guard.py` | Zip-slip, zip-bomba, simvolik havola, oq ro‘yxat, hajm, katalog o‘chirilishi | test ichida yaratiladigan arxivlar |
 | `test_validators.py` | Obraz nomi regexi | to‘g‘ri va zararli nomlar |
 | `test_docker_cmd.py` | Majburiy bayroqlar, `shell=False`, maxfiy muhit o‘zgaruvchilari yo‘qligi | fake runner |
@@ -781,18 +804,18 @@ Barcha testlar Docker’siz o‘tadi. Docker chaqiruvlari `subprocess.run` ni al
 | Testlar | pytest, httpx |
 | Skanerlar | Trivy 0.76.1, Grype v0.121.0, KICS v2.2.0, Checkov 3.3.26 (digest bo‘yicha) |
 
-## 17. Tasdiqlanishi kerak bo‘lgan masalalar
+## 17. Qabul qilingan qarorlar
 
-| № | Masala | Hozirgi qaror |
+| № | Masala | Qaror |
 |---|---|---|
-| 1 | `ground_truth.csv` tuzilmasi va regex mantiqi | Fayl olingach 7.2-bo‘lim moslashtiriladi |
-| 2 | `stats3.py`: Jaccard elementi, GHSA → CVE usuli, bo‘sh to‘plam | Fayl olingach 7.1-bo‘lim moslashtiriladi |
-| 3 | `analyze.py`: jiddiylik xaritasi (Negligible, Checkov `null`) | 6.3-bo‘limdagi xarita |
-| 4 | `tool_digests.txt` formati, Checkov obrazi `Id` mi yoki boshqa digestmi | 11.4-bo‘lim |
-| 5 | `config.ps1` dagi vosita argumentlari | 11.2-bo‘limdagi jadval ular bilan tenglashtiriladi |
-| 6 | AHP: bazaviy ssenariyda vaznlar normallashtirilsinmi | Yo‘q, II bobdagi qiymatlar aynan ishlatiladi |
-| 7 | Digest mos kelmaganda xatti-harakat | Tekshiruvlar bloklanadi, ko‘rish rejimi qoladi |
-| 8 | KICS uchun yozish katalogi istisnosi | Bo‘sh, alohida `out/` katalogi |
+| 1 | `ground_truth.csv` tuzilmasi va regex mantiqi | 7.2-bo‘lim: GT baholash va resurs turi bo‘yicha toifalash |
+| 2 | `stats3.py`: Jaccard elementi, GHSA → CVE, bo‘sh to‘plam | 7.1-bo‘lim: CVE kaliti, `relatedVulnerabilities`, bo‘sh → 1,0 |
+| 3 | Jiddiylik xaritasi (Negligible, Checkov `null`) | Negligible → LOW, `null` → UNKNOWN (6.3-bo‘lim) |
+| 4 | `tool_digests.txt` va Checkov | 11.4-bo‘lim: Checkov uchun birinchi yig‘ishdagi `Id` qotiriladi |
+| 5 | Vosita argumentlari | `run_tests.ps1` dagi argumentlar aynan (11.2-bo‘lim) |
+| 6 | AHP vaznlari | `ahp.json` dagi aniq `w`, ballar `S2` (foydalanuvchi tasdiqlagan) |
+| 7 | Digest mos kelmaganda | Tekshiruvlar bloklanadi, tarix, demo va AHP ishlaydi (foydalanuvchi tasdiqlagan) |
+| 8 | KICS uchun yozish katalogi | Bo‘sh, alohida `out/` katalogi |
 
 ## 18. Bosqichlar
 

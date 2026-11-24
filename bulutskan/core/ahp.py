@@ -18,12 +18,25 @@ bu modul faqat hisoblash mantiqini saqlaydi.
 
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 
 #: Ballar teng deb hisoblanadigan farq (suzuvchi nuqta xatosi uchun).
 _TIE_TOLERANCE = 1e-9
+
+RESOURCES = Path(__file__).resolve().parent.parent / "resources"
+#: II bob: juftlik taqqoslash matritsasi va xos vektor vaznlari.
+DEFAULT_AHP_FILE = RESOURCES / "ahp.json"
+#: II bob: yangilangan ballar jadvali (``S2``), 3.9-jadval shundan hisoblangan.
+DEFAULT_SCORES_FILE = RESOURCES / "ahp_upd.json"
+
+#: Saaty tasodifiy muvofiqlik indeksi (RI), matritsa o‘lchami bo‘yicha.
+RANDOM_INDEX: dict[int, float] = {
+    1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49,
+}
 
 
 @dataclass(frozen=True)
@@ -91,11 +104,27 @@ class RankedTool:
 
 
 @dataclass(frozen=True)
+class Consistency:
+    """Juftlik taqqoslash matritsasining muvofiqligi."""
+
+    lambda_max: float
+    ci: float
+    cr: float
+
+    @property
+    def acceptable(self) -> bool:
+        """Saaty mezoni: CR < 0,1."""
+        return self.cr < 0.1
+
+
+@dataclass(frozen=True)
 class AhpModel:
     """AHP modeli: bazaviy vaznlar va vositalar ballari."""
 
     weights: tuple[float, ...]
     scores: Mapping[str, tuple[float, ...]]
+    #: Juftlik taqqoslash matritsasi (bo‘lsa, muvofiqlik hisoblanadi).
+    matrix: tuple[tuple[float, ...], ...] | None = None
 
     def __post_init__(self) -> None:
         _check_vector(self.weights, "vaznlar")
@@ -116,6 +145,12 @@ class AhpModel:
             scores={tool: tuple(float(x) for x in row) for tool, row in scores.items()},
         )
 
+    def consistency(self) -> Consistency | None:
+        """Matritsa berilgan bo‘lsa, uning muvofiqlik ko‘rsatkichlari."""
+        if self.matrix is None:
+            return None
+        return consistency(self.matrix)
+
     @property
     def tools(self) -> tuple[str, ...]:
         """Vositalar nomlari (kiritilgan tartibda)."""
@@ -133,14 +168,15 @@ class AhpModel:
     def rank(self, weights: Sequence[float] | None = None) -> list[RankedTool]:
         """Vositalarni umumiy ball bo‘yicha kamayish tartibida saralaydi.
 
-        Ballari teng vositalar bir xil o‘rinni oladi (masalan, 6, 6, 8).
-        ``weights`` berilmasa, bazaviy vaznlar ishlatiladi.
+        Ballari teng vositalar bir xil o‘rinni oladi (masalan, 6, 6, 8) va
+        kiritilgan tartibida qoladi. ``weights`` berilmasa, bazaviy vaznlar
+        ishlatiladi.
         """
         w = tuple(self.weights if weights is None else weights)
         _check_vector(w, "vaznlar")
         scored = sorted(
             ((tool, total_score(w, row)) for tool, row in self.scores.items()),
-            key=lambda item: (-item[1], item[0]),
+            key=lambda item: -item[1],
         )
         ranked: list[RankedTool] = []
         for index, (tool, value) in enumerate(scored):
@@ -150,6 +186,106 @@ class AhpModel:
                 position = index + 1
             ranked.append(RankedTool(position=position, tool=tool, score=value))
         return ranked
+
+
+@dataclass(frozen=True)
+class SensitivityRow:
+    """Sezgirlik tahlilining bitta qatori: bitta vazn o‘zgartirilganda."""
+
+    criterion: str
+    factor: float
+    leader: str
+    top3: tuple[str, ...]
+    #: Birinchi uchlik tarkibi o‘zgarmadi (tartibidan qat’i nazar).
+    same_top3: bool
+    #: To‘liq reyting tartibi o‘zgarmadi.
+    same_order: bool
+
+
+def sensitivity(
+    model: AhpModel,
+    factors: Sequence[float] = (0.5, 1.5),
+    weights: Sequence[float] | None = None,
+) -> list[SensitivityRow]:
+    """Har bir mezon vaznini ``factors`` ga ko‘paytirib, reyting barqarorligini tekshiradi."""
+    base_w = tuple(model.weights if weights is None else weights)
+    base = [r.tool for r in model.rank(base_w)]
+    rows: list[SensitivityRow] = []
+    for i, code in enumerate(CRITERION_CODES):
+        for factor in factors:
+            mult = [1.0] * len(CRITERIA)
+            mult[i] = float(factor)
+            order = [r.tool for r in model.rank(apply_multipliers(base_w, mult))]
+            rows.append(
+                SensitivityRow(
+                    criterion=code,
+                    factor=float(factor),
+                    leader=order[0],
+                    top3=tuple(order[:3]),
+                    same_top3=set(order[:3]) == set(base[:3]),
+                    same_order=order == base,
+                )
+            )
+    return rows
+
+
+def principal_eigenvector(
+    matrix: Sequence[Sequence[float]],
+    tol: float = 1e-14,
+    max_iter: int = 10_000,
+) -> tuple[float, tuple[float, ...]]:
+    """Musbat matritsaning bosh xos qiymati va normallashgan xos vektori.
+
+    Daraja usuli (power iteration). Musbat teskari-simmetrik AHP matritsasi
+    uchun Perron–Frobenius teoremasiga ko‘ra yaqinlashadi.
+    """
+    n = len(matrix)
+    if n == 0 or any(len(row) != n for row in matrix):
+        raise ValueError("Kvadrat matritsa kutilgan")
+    vec = [1.0 / n] * n
+    for _ in range(max_iter):
+        nxt = [math.fsum(matrix[i][j] * vec[j] for j in range(n)) for i in range(n)]
+        total = math.fsum(nxt)
+        nxt = [x / total for x in nxt]
+        if max(abs(a - b) for a, b in zip(nxt, vec, strict=True)) < tol:
+            vec = nxt
+            break
+        vec = nxt
+    aw = [math.fsum(matrix[i][j] * vec[j] for j in range(n)) for i in range(n)]
+    lam = math.fsum(aw[i] / vec[i] for i in range(n)) / n
+    return lam, tuple(vec)
+
+
+def consistency(matrix: Sequence[Sequence[float]]) -> Consistency:
+    """CI = (λ_max − n) / (n − 1), CR = CI / RI."""
+    n = len(matrix)
+    lam, _ = principal_eigenvector(matrix)
+    ci = (lam - n) / (n - 1) if n > 1 else 0.0
+    ri = RANDOM_INDEX.get(n, 0.0)
+    return Consistency(lambda_max=lam, ci=ci, cr=ci / ri if ri else 0.0)
+
+
+def load_dissertation_model(
+    ahp_file: str | Path = DEFAULT_AHP_FILE,
+    scores_file: str | Path = DEFAULT_SCORES_FILE,
+) -> AhpModel:
+    """II bob modelini yuklaydi.
+
+    Vaznlar — ``ahp.json`` dagi ``w`` (xos vektor usuli, yig‘indisi 1),
+    matritsa — ``A``, ballar — ``ahp_upd.json`` dagi ``S2``. Vositalar
+    tartibi ``ahp.json`` dagi ``T`` ro‘yxatidan olinadi.
+    """
+    ahp = json.loads(Path(ahp_file).read_text(encoding="utf-8"))
+    upd = json.loads(Path(scores_file).read_text(encoding="utf-8"))
+    if list(ahp["C"]) != list(CRITERION_CODES):
+        raise ValueError("ahp.json dagi mezonlar K1..K7 tartibida emas")
+    order = [t for t in ahp.get("T", []) if t in upd["S2"]] or list(upd["S2"])
+    model = AhpModel(
+        weights=tuple(float(w) for w in ahp["w"]),
+        scores={t: tuple(float(x) for x in upd["S2"][t]) for t in order},
+        matrix=tuple(tuple(float(x) for x in row) for row in ahp["A"]),
+    )
+    return model
 
 
 def normalize_weights(weights: Sequence[float]) -> tuple[float, ...]:

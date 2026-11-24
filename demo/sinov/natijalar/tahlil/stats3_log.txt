@@ -1,0 +1,62 @@
+{
+ "overall": {
+  "t": 3553,
+  "g": 3529,
+  "common": 3074,
+  "j": 0.7669660678642715,
+  "j_core": 0.8371139655643618,
+  "tc": 3428,
+  "gc": 3294,
+  "common_core": 3063
+ },
+ "groups": {
+  "A": {
+   "t": 278,
+   "g": 327,
+   "common": 253,
+   "j": 0.71875
+  },
+  "B": {
+   "t": 1711,
+   "g": 1882,
+   "common": 1574,
+   "j": 0.7795938583457157
+  },
+  "C": {
+   "t": 1191,
+   "g": 930,
+   "common": 922,
+   "j": 0.7689741451209341
+  },
+  "D": {
+   "t": 373,
+   "g": 390,
+   "common": 325,
+   "j": 0.7420091324200914
+  }
+ },
+ "causes": {
+  "T: CVE bo‘lmagan identifikatorlar (TEMP/DSA/DLA/GHSA)": 114,
+  "T: boshqa": 25,
+  "G: «tuzatilmaydi» (wont-fix) holatidagi yozuvlar": 168,
+  "G: boshqa": 52,
+  "G: binar fayl / CPE bo‘yicha moslik": 235,
+  "T: Debian 11 bo‘yicha 2026-yilgi yangi yozuvlar": 279,
+  "T: Go binar fayllari (stdlib)": 61
+ }
+}
+{'image': 'debian:12-slim', 'group': 'A', 'g_n': 107, 'g_fix': 0, 'g_cpe': 0, 'g_crit': 1, 'g_high': 18, 'g_det': True, 't_n': 120, 't_fix': 0, 'eosl': False, 'os': 'debian 12.15', 't_crit': 1, 't_high': 10, 't_det': True, 'common': 107, 'only_t': 13, 'only_g': 0, 'j': 0.8916666666666667, 'c_tg': 0.8916666666666667, 'c_gt': 1.0, 'j_core': 0.9907407407407407}
+{'image': 'ubuntu:24.04', 'group': 'A', 'g_n': 49, 'g_fix': 6, 'g_cpe': 0, 'g_crit': 0, 'g_high': 0, 'g_det': True, 't_n': 20, 't_fix': 6, 'eosl': False, 'os': 'ubuntu 24.04', 't_crit': 0, 't_high': 0, 't_det': True, 'common': 20, 'only_t': 0, 'only_g': 29, 'j': 0.40816326530612246, 'c_tg': 1.0, 'c_gt': 0.40816326530612246, 'j_core': 0.40816326530612246}
+{'image': 'python:3.12-slim', 'group': 'A', 'g_n': 106, 'g_fix': 19, 'g_cpe': 13, 'g_crit': 0, 'g_high': 24, 'g_det': True, 't_n': 105, 't_fix': 6, 'eosl': False, 'os': 'debian 13.8', 't_crit': 0, 't_high': 13, 't_det': True, 'common': 93, 'only_t': 12, 'only_g': 13, 'j': 0.788135593220339, 'c_tg': 0.8857142857142857, 'c_gt': 0.8773584905660378, 'j_core': 1.0}
+{'image': 'python:3.12-alpine', 'group': 'A', 'g_n': 65, 'g_fix': 46, 'g_cpe': 32, 'g_crit': 1, 'g_high': 22, 'g_det': True, 't_n': 33, 't_fix': 33, 'eosl': False, 'os': 'alpine 3.24.4', 't_crit': 0, 't_high': 16, 't_det': True, 'common': 33, 'only_t': 0, 'only_g': 32, 'j': 0.5076923076923077, 'c_tg': 1.0, 'c_gt': 0.5076923076923077, 'j_core': 1.0}
+{'image': 'alpine:3.18', 'group': 'B', 'g_n': 6, 'g_fix': 0, 'g_cpe': 6, 'g_crit': 0, 'g_high': 1, 'g_det': True, 't_n': 0, 't_fix': 0, 'eosl': True, 'os': 'alpine 3.18.12', 't_crit': 0, 't_high': 0, 't_det': True, 'common': 0, 'only_t': 0, 'only_g': 6, 'j': 0.0, 'c_tg': None, 'c_gt': 0.0, 'j_core': 1.0}
+{'image': 'alpine:3.20', 'group': 'B', 'g_n': 3, 'g_fix': 1, 'g_cpe': 2, 'g_crit': 0, 'g_high': 2, 'g_det': True, 't_n': 1, 't_fix': 1, 'eosl': True, 'os': 'alpine 3.20.10', 't_crit': 0, 't_high': 1, 't_det': True, 'common': 1, 'only_t': 0, 'only_g': 2, 'j': 0.3333333333333333, 'c_tg': 1.0, 'c_gt': 0.3333333333333333, 'j_core': 1.0}
+{'image': 'debian:11-slim', 'group': 'B', 'g_n': 110, 'g_fix': 0, 'g_cpe': 0, 'g_crit': 8, 'g_high': 22, 'g_det': True, 't_n': 211, 't_fix': 0, 'eosl': True, 'os': 'debian 11.11', 't_crit': 5, 't_high': 41, 't_det': True, 'common': 109, 'only_t': 102, 'only_g': 1, 'j': 0.5141509433962265, 'c_tg': 0.5165876777251185, 'c_gt': 0.990909090909091, 'j_core': 0.5477386934673367}
+{'image': 'ubuntu:20.04', 'group': 'B', 'g_n': 155, 'g_fix': 1, 'g_cpe': 0, 'g_crit': 0, 'g_high': 2, 'g_det': True, 't_n': 1, 't_fix': 1, 'eosl': True, 'os': 'ubuntu 20.04', 't_crit': 0, 't_high': 0, 't_det': True, 'common': 1, 'only_t': 0, 'only_g': 154, 'j': 0.0064516129032258064, 'c_tg': 1.0, 'c_gt': 0.0064516129032258064, 'j_core': 0.0064516129032258064}
+{'image': 'centos:7', 'group': 'B', 'g_n': 1222, 'g_fix': 69, 'g_cpe': 0, 'g_crit': 4, 'g_high': 109, 'g_det': True, 't_n': 1213, 't_fix': 147, 'eosl': True, 'os': 'centos 7.9.2009', 't_crit': 2, 't_high': 94, 't_det': True, 'common': 1193, 'only_t': 20, 'only_g': 29, 'j': 0.9605475040257649, 'c_tg': 0.9835119538334708, 'c_gt': 0.9762684124386252, 'j_core': 0.9605475040257649}
+{'image': 'python:3.9-slim', 'group': 'B', 'g_n': 276, 'g_fix': 188, 'g_cpe': 54, 'g_crit': 13, 'g_high': 94, 'g_det': True, 't_n': 237, 't_fix': 138, 'eosl': False, 'os': 'debian 13.1', 't_crit': 4, 't_high': 42, 't_det': True, 'common': 222, 'only_t': 15, 'only_g': 54, 'j': 0.7628865979381443, 'c_tg': 0.9367088607594937, 'c_gt': 0.8043478260869565, 'j_core': 0.9954954954954955}
+{'image': 'node:16-alpine', 'group': 'B', 'g_n': 110, 'g_fix': 102, 'g_cpe': 62, 'g_crit': 4, 'g_high': 47, 'g_det': True, 't_n': 48, 't_fix': 47, 'eosl': True, 'os': 'alpine 3.18.3', 't_crit': 1, 't_high': 22, 't_det': True, 'common': 48, 'only_t': 0, 'only_g': 62, 'j': 0.43636363636363634, 'c_tg': 1.0, 'c_gt': 0.43636363636363634, 'j_core': 1.0}
+{'image': 'nginx:1.21', 'group': 'C', 'g_n': 508, 'g_fix': 278, 'g_cpe': 0, 'g_crit': 36, 'g_high': 158, 'g_det': True, 't_n': 683, 't_fix': 288, 'eosl': True, 'os': 'debian 11.3', 't_crit': 23, 't_high': 167, 't_det': True, 'common': 502, 'only_t': 181, 'only_g': 6, 'j': 0.7285921625544267, 'c_tg': 0.7349926793557833, 'c_gt': 0.9881889763779528, 'j_core': 0.7594553706505295}
+{'image': 'postgres:13', 'group': 'C', 'g_n': 305, 'g_fix': 169, 'g_cpe': 0, 'g_crit': 14, 'g_high': 106, 'g_det': True, 't_n': 380, 't_fix': 232, 'eosl': False, 'os': 'debian 13.1', 't_crit': 8, 't_high': 93, 't_det': True, 'common': 305, 'only_t': 75, 'only_g': 0, 'j': 0.8026315789473685, 'c_tg': 0.8026315789473685, 'c_gt': 1.0, 'j_core': 0.8333333333333334}
+{'image': 'redis:6.2', 'group': 'C', 'g_n': 117, 'g_fix': 0, 'g_cpe': 2, 'g_crit': 1, 'g_high': 23, 'g_det': True, 't_n': 128, 't_fix': 0, 'eosl': False, 'os': 'debian 12.15', 't_crit': 1, 't_high': 11, 't_det': True, 'common': 115, 'only_t': 13, 'only_g': 2, 'j': 0.8846153846153846, 'c_tg': 0.8984375, 'c_gt': 0.9829059829059829, 'j_core': 0.9913793103448276}
+{'image': 'bkimminich/juice-shop:v15.0.0', 'group': 'D', 'g_n': 390, 'g_fix': 345, 'g_cpe': 64, 'g_crit': 58, 'g_high': 168, 'g_det': True, 't_n': 373, 't_fix': 292, 'eosl': True, 'os': 'debian 11.6', 't_crit': 50, 't_high': 125, 't_det': True, 'common': 325, 'only_t': 48, 'only_g': 65, 'j': 0.7420091324200914, 'c_tg': 0.871313672922252, 'c_gt': 0.8333333333333334, 'j_core': 0.860655737704918}

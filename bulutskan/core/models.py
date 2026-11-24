@@ -112,8 +112,12 @@ class Finding(BaseModel):
     kind: FindingKind
     installed_version: str | None = None
     package_type: str | None = None
+    resource_name: str | None = Field(
+        default=None, description="IaC: resurs nomi (KICS resource_name va h.k.), toifalash uchun"
+    )
     category: str | None = Field(default=None, description="IaC xato toifasi")
     cpe_based: bool = Field(default=False, description="Grype: CPE yoki binar orqali topilgan")
+    known_exploited: bool = Field(default=False, description="CISA KEV ro‘yxatida bor (Grype)")
     line_start: int | None = None
     line_end: int | None = None
     primary_url: str | None = None

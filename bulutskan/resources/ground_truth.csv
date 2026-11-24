@@ -1,0 +1,41 @@
+id;category;insecure_file;insecure_token;secure_file;secure_token;regex;exclude;tavsif
+TF-01;Kodga yozilgan kalitlar;terraform/insecure/main.tf;;terraform/secure/main.tf;;access key|secret key|hard ?coded (aws|access|secret|credential);;Provayder blokida AWS kirish kalitlari ochiq yozilgan
+TF-02;Ochiq S3 ACL;terraform/insecure/main.tf;tf02_bucket;terraform/secure/main.tf;sec02_bucket;\bacl\b|public[ -]?read|all ?users|public (read|write) access;block|policy;S3 bucket ACL public-read
+TF-03;S3 public access block;terraform/insecure/main.tf;tf02_bucket;terraform/secure/main.tf;sec02_bucket;public access block|block public;;Public access block yo'q
+TF-04;S3 shifrlash;terraform/insecure/main.tf;tf02_bucket;terraform/secure/main.tf;sec02_bucket;encrypt|server[- ]side|\bsse\b;;Server tomonida shifrlash yo'q
+TF-05;S3 versiyalash;terraform/insecure/main.tf;tf02_bucket;terraform/secure/main.tf;sec02_bucket;version;;Versiyalash yoqilmagan
+TF-06;S3 jurnallash;terraform/insecure/main.tf;tf02_bucket;terraform/secure/main.tf;sec02_bucket;logging|access log;;Kirish jurnallari yo'q
+TF-07;SSH ochiq;terraform/insecure/main.tf;tf07_ssh_open;terraform/secure/main.tf;sec07_ssh;\b22\b|\bssh\b;;22-port 0.0.0.0/0 uchun ochiq
+TF-08;RDP ochiq;terraform/insecure/main.tf;tf08_rdp_open;terraform/secure/main.tf;sec08_rdp;3389|\brdp\b|remote desktop;;3389-port 0.0.0.0/0 uchun ochiq
+TF-09;RDS ommaviy;terraform/insecure/main.tf;tf09_rds;terraform/secure/main.tf;sec09_rds;public;;publicly_accessible = true
+TF-10;RDS shifrlash;terraform/insecure/main.tf;tf09_rds;terraform/secure/main.tf;sec09_rds;encrypt;;storage_encrypted = false
+TF-11;RDS zaxira;terraform/insecure/main.tf;tf09_rds;terraform/secure/main.tf;sec09_rds;backup;;backup_retention_period = 0
+TF-12;Kodga yozilgan parol;terraform/insecure/main.tf;tf09_rds;terraform/secure/main.tf;sec09_rds;password|secret|credential;;RDS paroli kodda ochiq
+TF-13;EBS shifrlash;terraform/insecure/main.tf;tf13_ebs;terraform/secure/main.tf;sec13_ebs;encrypt;;EBS disk shifrlanmagan
+TF-14;IMDSv1;terraform/insecure/main.tf;tf14_ec2;terraform/secure/main.tf;sec14_ec2;metadata|imds|http_tokens|\btoken;;http_tokens = optional
+TF-15;EC2 ommaviy IP;terraform/insecure/main.tf;tf14_ec2;terraform/secure/main.tf;sec14_ec2;public ip|associate_public_ip;;associate_public_ip_address = true
+TF-16;IAM wildcard;terraform/insecure/main.tf;tf16_admin_policy;terraform/secure/main.tf;sec16_policy;\*|wildcard|full.{0,20}(privilege|permission|admin)|administrative|privilege escalation|all actions;;Action = * Resource = *
+TF-17;KMS rotatsiyasi;terraform/insecure/main.tf;tf17_kms;terraform/secure/main.tf;sec17_kms;rotat;;enable_key_rotation = false
+TF-18;CloudTrail tekshiruvi;terraform/insecure/main.tf;tf18_trail;terraform/secure/main.tf;sec18_trail;log file validation|validation;;enable_log_file_validation = false
+TF-19;CloudTrail shifrlash;terraform/insecure/main.tf;tf18_trail;terraform/secure/main.tf;sec18_trail;encrypt|\bkms\b;;kms_key_id yo'q
+TF-20;HTTP listener;terraform/insecure/main.tf;tf20_http;terraform/secure/main.tf;sec20_https;https|\btls\b|\bssl\b|insecure protocol|\bhttp\b;;protocol = HTTP
+K8S-01;Imtiyozli konteyner;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;privileged;escalation;privileged: true
+K8S-02;Imtiyozlarni oshirish;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;privilege ?escalation|allowprivilegeescalation|elevate;;allowPrivilegeEscalation: true
+K8S-03;Root foydalanuvchi;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;\broot\b|runasuser|runasnonroot|non-?root|\buid\b;read[- ]?only;runAsUser: 0
+K8S-04;Faqat o'qish fayl tizimi;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;read[- ]?only;;readOnlyRootFilesystem: false
+K8S-05;hostNetwork;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;host ?network;;hostNetwork: true
+K8S-06;hostPID;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;host ?pid|process id;;hostPID: true
+K8S-07;latest tegi;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;latest|digest|image tag|tag should;;image: nginx:latest
+K8S-08;SYS_ADMIN;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;sys_admin|capabilit;;capabilities.add SYS_ADMIN
+K8S-09;Ochiq parol env'da;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;secret|password|credential;;DB_PASSWORD qiymati ochiq yozilgan
+K8S-10;Resurs cheklovlari;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;limit;limitrange|resourcequota;resources.limits yo'q
+K8S-11;Default namespace;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;default namespace|namespace.{0,15}(default|not set|missing|not defined)|unrecommended namespace;host|\bpid\b|ipc|network;namespace ko'rsatilmagan
+K8S-12;Seccomp profili;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;seccomp;;seccompProfile yo'q
+K8S-13;hostPath;kubernetes/insecure/deployment.yaml;;kubernetes/secure/deployment.yaml;;hostpath|host path|os director|sensitive (os|host|path|director)|host.{0,10}(volume|mount);;hostPath: /
+DF-01;latest bazaviy obraz;docker/insecure/Dockerfile;;docker/secure/Dockerfile;;latest|version tag|\btag\b;;FROM ubuntu:latest
+DF-02;ADD buyrug'i;docker/insecure/Dockerfile;;docker/secure/Dockerfile;;\badd\b;;ADD o'rniga COPY
+DF-03;curl | sh;docker/insecure/Dockerfile;;docker/secure/Dockerfile;;pipe|curl|wget|bash|\| ?sh;instead of add;Skriptni internetdan to'g'ridan-to'g'ri ishga tushirish
+DF-04;ENV'dagi maxfiy kalit;docker/insecure/Dockerfile;;docker/secure/Dockerfile;;secret|password|api.?key|entropy|credential;;ENV API_KEY
+DF-05;SSH porti;docker/insecure/Dockerfile;;docker/secure/Dockerfile;;port 22|\b22\b|\bssh\b;;EXPOSE 22
+DF-06;Root foydalanuvchi;docker/insecure/Dockerfile;;docker/secure/Dockerfile;;\buser\b|\broot\b;;USER ko'rsatilmagan
+DF-07;HEALTHCHECK;docker/insecure/Dockerfile;;docker/secure/Dockerfile;;healthcheck;;HEALTHCHECK yo'q

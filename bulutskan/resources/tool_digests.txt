@@ -1,0 +1,5 @@
+﻿
+aquasec/trivy:0.76.1  ->  aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+anchore/grype:v0.121.0  ->  anchore/grype@sha256:621d56d1d68106b787022c81546f7e0a36202a25d1239f0c20195fab8c16f7ea
+checkmarx/kics:v2.2.0  ->  checkmarx/kics@sha256:ef29dbac14b046b1ef65f3280646112e927a61781c5f01bca1aeb723e0b96003
+checkov (pip) == 3.3.26

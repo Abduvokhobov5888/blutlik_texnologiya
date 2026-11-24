@@ -1,0 +1,63 @@
+
+=== IaC ===
+Checkov: TP=36/40 recall=0.900 FP=0 precision=1.000 F1=0.947 jami=102 (xavfsiz fayllarda 23) groups={'TF': {'n': 20, 'tp': 19, 'fp': 0}, 'K8S': {'n': 13, 'tp': 11, 'fp': 0}, 'DF': {'n': 7, 'tp': 6, 'fp': 0}}
+KICS: TP=34/40 recall=0.850 FP=0 precision=1.000 F1=0.919 jami=116 (xavfsiz fayllarda 33) groups={'TF': {'n': 20, 'tp': 17, 'fp': 0}, 'K8S': {'n': 13, 'tp': 12, 'fp': 0}, 'DF': {'n': 7, 'tp': 5, 'fp': 0}}
+Trivy (config): TP=32/40 recall=0.800 FP=0 precision=1.000 F1=0.889 jami=66 (xavfsiz fayllarda 8) groups={'TF': {'n': 20, 'tp': 15, 'fp': 0}, 'K8S': {'n': 13, 'tp': 12, 'fp': 0}, 'DF': {'n': 7, 'tp': 5, 'fp': 0}}
+Overlap: {'Checkov vs KICS': {'both': 32, 'only_a': 4, 'only_b': 2, 'jaccard': 0.8421052631578947}, 'Checkov vs Trivy (config)': {'both': 31, 'only_a': 5, 'only_b': 1, 'jaccard': 0.8378378378378378}, 'KICS vs Trivy (config)': {'both': 29, 'only_a': 5, 'only_b': 3, 'jaccard': 0.7837837837837838}}
+Hech biri topmagan: ['DF-03', 'K8S-09']
+
+=== Obrazlar ===
+{'image': 'alpine:3.18', 'Trivy_findings': 0, 'Trivy_unique_cve': 0, 'Trivy_critical': 0, 'Trivy_high': 0, 'Trivy_medium': 0, 'Trivy_low': 0, 'Trivy_fixable': 0, 'Trivy_deterministic': 1, 'Grype_findings': 14, 'Grype_unique_cve': 6, 'Grype_critical': 0, 'Grype_high': 2, 'Grype_medium': 6, 'Grype_low': 6, 'Grype_fixable': 0, 'Grype_deterministic': 1, 'common': 0, 'only_trivy': 0, 'only_grype': 6, 'jaccard': 0.0, 'tversky_trivy_in_grype': None, 'tversky_grype_in_trivy': 0.0}
+{'image': 'alpine:3.20', 'Trivy_findings': 2, 'Trivy_unique_cve': 1, 'Trivy_critical': 0, 'Trivy_high': 2, 'Trivy_medium': 0, 'Trivy_low': 0, 'Trivy_fixable': 2, 'Trivy_deterministic': 1, 'Grype_findings': 6, 'Grype_unique_cve': 3, 'Grype_critical': 0, 'Grype_high': 3, 'Grype_medium': 3, 'Grype_low': 0, 'Grype_fixable': 2, 'Grype_deterministic': 1, 'common': 1, 'only_trivy': 0, 'only_grype': 2, 'jaccard': 0.333, 'tversky_trivy_in_grype': 1.0, 'tversky_grype_in_trivy': 0.333}
+{'image': 'debian:11-slim', 'Trivy_findings': 412, 'Trivy_unique_cve': 211, 'Trivy_critical': 5, 'Trivy_high': 123, 'Trivy_medium': 145, 'Trivy_low': 121, 'Trivy_fixable': 0, 'Trivy_deterministic': 1, 'Grype_findings': 211, 'Grype_unique_cve': 110, 'Grype_critical': 9, 'Grype_high': 39, 'Grype_medium': 71, 'Grype_low': 92, 'Grype_fixable': 0, 'Grype_deterministic': 1, 'common': 109, 'only_trivy': 102, 'only_grype': 1, 'jaccard': 0.514, 'tversky_trivy_in_grype': 0.517, 'tversky_grype_in_trivy': 0.991}
+{'image': 'debian:12-slim', 'Trivy_findings': 250, 'Trivy_unique_cve': 120, 'Trivy_critical': 1, 'Trivy_high': 37, 'Trivy_medium': 106, 'Trivy_low': 89, 'Trivy_fixable': 0, 'Trivy_deterministic': 1, 'Grype_findings': 235, 'Grype_unique_cve': 107, 'Grype_critical': 2, 'Grype_high': 52, 'Grype_medium': 97, 'Grype_low': 84, 'Grype_fixable': 0, 'Grype_deterministic': 1, 'common': 107, 'only_trivy': 13, 'only_grype': 0, 'jaccard': 0.892, 'tversky_trivy_in_grype': 0.892, 'tversky_grype_in_trivy': 1.0}
+{'image': 'ubuntu:20.04', 'Trivy_findings': 2, 'Trivy_unique_cve': 1, 'Trivy_critical': 0, 'Trivy_high': 0, 'Trivy_medium': 2, 'Trivy_low': 0, 'Trivy_fixable': 2, 'Trivy_deterministic': 1, 'Grype_findings': 312, 'Grype_unique_cve': 155, 'Grype_critical': 0, 'Grype_high': 3, 'Grype_medium': 251, 'Grype_low': 58, 'Grype_fixable': 2, 'Grype_deterministic': 1, 'common': 1, 'only_trivy': 0, 'only_grype': 154, 'jaccard': 0.006, 'tversky_trivy_in_grype': 1.0, 'tversky_grype_in_trivy': 0.006}
+{'image': 'ubuntu:24.04', 'Trivy_findings': 35, 'Trivy_unique_cve': 20, 'Trivy_critical': 0, 'Trivy_high': 0, 'Trivy_medium': 30, 'Trivy_low': 5, 'Trivy_fixable': 12, 'Trivy_deterministic': 1, 'Grype_findings': 79, 'Grype_unique_cve': 49, 'Grype_critical': 0, 'Grype_high': 0, 'Grype_medium': 70, 'Grype_low': 9, 'Grype_fixable': 12, 'Grype_deterministic': 1, 'common': 20, 'only_trivy': 0, 'only_grype': 29, 'jaccard': 0.408, 'tversky_trivy_in_grype': 1.0, 'tversky_grype_in_trivy': 0.408}
+{'image': 'centos:7', 'Trivy_findings': 1751, 'Trivy_unique_cve': 1213, 'Trivy_critical': 4, 'Trivy_high': 123, 'Trivy_medium': 909, 'Trivy_low': 715, 'Trivy_fixable': 200, 'Trivy_deterministic': 1, 'Grype_findings': 1773, 'Grype_unique_cve': 1222, 'Grype_critical': 8, 'Grype_high': 142, 'Grype_medium': 902, 'Grype_low': 721, 'Grype_fixable': 98, 'Grype_deterministic': 1, 'common': 1193, 'only_trivy': 20, 'only_grype': 29, 'jaccard': 0.961, 'tversky_trivy_in_grype': 0.984, 'tversky_grype_in_trivy': 0.976}
+{'image': 'python:3.9-slim', 'Trivy_findings': 558, 'Trivy_unique_cve': 237, 'Trivy_critical': 6, 'Trivy_high': 134, 'Trivy_medium': 224, 'Trivy_low': 177, 'Trivy_fixable': 336, 'Trivy_deterministic': 1, 'Grype_findings': 595, 'Grype_unique_cve': 276, 'Grype_critical': 24, 'Grype_high': 248, 'Grype_medium': 216, 'Grype_low': 107, 'Grype_fixable': 386, 'Grype_deterministic': 1, 'common': 222, 'only_trivy': 15, 'only_grype': 54, 'jaccard': 0.763, 'tversky_trivy_in_grype': 0.937, 'tversky_grype_in_trivy': 0.804}
+{'image': 'python:3.12-slim', 'Trivy_findings': 228, 'Trivy_unique_cve': 105, 'Trivy_critical': 0, 'Trivy_high': 53, 'Trivy_medium': 81, 'Trivy_low': 80, 'Trivy_fixable': 6, 'Trivy_deterministic': 1, 'Grype_findings': 227, 'Grype_unique_cve': 106, 'Grype_critical': 0, 'Grype_high': 82, 'Grype_medium': 79, 'Grype_low': 66, 'Grype_fixable': 19, 'Grype_deterministic': 1, 'common': 93, 'only_trivy': 12, 'only_grype': 13, 'jaccard': 0.788, 'tversky_trivy_in_grype': 0.886, 'tversky_grype_in_trivy': 0.877}
+{'image': 'python:3.12-alpine', 'Trivy_findings': 38, 'Trivy_unique_cve': 33, 'Trivy_critical': 0, 'Trivy_high': 16, 'Trivy_medium': 17, 'Trivy_low': 5, 'Trivy_fixable': 38, 'Trivy_deterministic': 1, 'Grype_findings': 79, 'Grype_unique_cve': 65, 'Grype_critical': 1, 'Grype_high': 31, 'Grype_medium': 35, 'Grype_low': 6, 'Grype_fixable': 51, 'Grype_deterministic': 1, 'common': 33, 'only_trivy': 0, 'only_grype': 32, 'jaccard': 0.508, 'tversky_trivy_in_grype': 1.0, 'tversky_grype_in_trivy': 0.508}
+{'image': 'node:16-alpine', 'Trivy_findings': 91, 'Trivy_unique_cve': 48, 'Trivy_critical': 1, 'Trivy_high': 41, 'Trivy_medium': 29, 'Trivy_low': 20, 'Trivy_fixable': 90, 'Trivy_deterministic': 1, 'Grype_findings': 161, 'Grype_unique_cve': 110, 'Grype_critical': 6, 'Grype_high': 68, 'Grype_medium': 65, 'Grype_low': 22, 'Grype_fixable': 145, 'Grype_deterministic': 1, 'common': 48, 'only_trivy': 0, 'only_grype': 62, 'jaccard': 0.436, 'tversky_trivy_in_grype': 1.0, 'tversky_grype_in_trivy': 0.436}
+{'image': 'nginx:1.21', 'Trivy_findings': 1133, 'Trivy_unique_cve': 683, 'Trivy_critical': 31, 'Trivy_high': 311, 'Trivy_medium': 431, 'Trivy_low': 322, 'Trivy_fixable': 433, 'Trivy_deterministic': 1, 'Grype_findings': 792, 'Grype_unique_cve': 508, 'Grype_critical': 52, 'Grype_high': 252, 'Grype_medium': 305, 'Grype_low': 181, 'Grype_fixable': 421, 'Grype_deterministic': 1, 'common': 502, 'only_trivy': 181, 'only_grype': 6, 'jaccard': 0.729, 'tversky_trivy_in_grype': 0.735, 'tversky_grype_in_trivy': 0.988}
+{'image': 'postgres:13', 'Trivy_findings': 943, 'Trivy_unique_cve': 380, 'Trivy_critical': 19, 'Trivy_high': 259, 'Trivy_medium': 369, 'Trivy_low': 270, 'Trivy_fixable': 584, 'Trivy_deterministic': 1, 'Grype_findings': 864, 'Grype_unique_cve': 305, 'Grype_critical': 42, 'Grype_high': 341, 'Grype_medium': 274, 'Grype_low': 183, 'Grype_fixable': 519, 'Grype_deterministic': 1, 'common': 305, 'only_trivy': 75, 'only_grype': 0, 'jaccard': 0.803, 'tversky_trivy_in_grype': 0.803, 'tversky_grype_in_trivy': 1.0}
+{'image': 'redis:6.2', 'Trivy_findings': 258, 'Trivy_unique_cve': 128, 'Trivy_critical': 1, 'Trivy_high': 38, 'Trivy_medium': 110, 'Trivy_low': 92, 'Trivy_fixable': 0, 'Trivy_deterministic': 1, 'Grype_findings': 245, 'Grype_unique_cve': 117, 'Grype_critical': 2, 'Grype_high': 57, 'Grype_medium': 99, 'Grype_low': 87, 'Grype_fixable': 0, 'Grype_deterministic': 1, 'common': 115, 'only_trivy': 13, 'only_grype': 2, 'jaccard': 0.885, 'tversky_trivy_in_grype': 0.898, 'tversky_grype_in_trivy': 0.983}
+{'image': 'bkimminich/juice-shop:v15.0.0', 'Trivy_findings': 548, 'Trivy_unique_cve': 373, 'Trivy_critical': 56, 'Trivy_high': 201, 'Trivy_medium': 191, 'Trivy_low': 93, 'Trivy_fixable': 430, 'Trivy_deterministic': 1, 'Grype_findings': 538, 'Grype_unique_cve': 390, 'Grype_critical': 68, 'Grype_high': 249, 'Grype_medium': 172, 'Grype_low': 49, 'Grype_fixable': 482, 'Grype_deterministic': 1, 'common': 325, 'only_trivy': 48, 'only_grype': 65, 'jaccard': 0.742, 'tversky_trivy_in_grype': 0.871, 'tversky_grype_in_trivy': 0.833}
+Umumiy: {'trivy_pairs': 3553, 'grype_pairs': 3529, 'common': 3074, 'jaccard': 0.7669660678642715}
+
+=== Vaqt ===
+{'tool': 'checkov', 'target': 'iac', 'n': 3, 'mean_s': 3.58, 'sd_s': 0.2}
+{'tool': 'grype', 'target': 'alpine:3.18', 'n': 3, 'mean_s': 48.56, 'sd_s': 0.56}
+{'tool': 'grype', 'target': 'alpine:3.20', 'n': 3, 'mean_s': 53.56, 'sd_s': 4.39}
+{'tool': 'grype', 'target': 'bkimminich/juice-shop:v15.0.0', 'n': 3, 'mean_s': 52.53, 'sd_s': 0.82}
+{'tool': 'grype', 'target': 'centos:7', 'n': 3, 'mean_s': 58.82, 'sd_s': 1.37}
+{'tool': 'grype', 'target': 'debian:11-slim', 'n': 3, 'mean_s': 53.98, 'sd_s': 2.91}
+{'tool': 'grype', 'target': 'debian:12-slim', 'n': 3, 'mean_s': 49.86, 'sd_s': 0.44}
+{'tool': 'grype', 'target': 'nginx:1.21', 'n': 3, 'mean_s': 59.54, 'sd_s': 0.75}
+{'tool': 'grype', 'target': 'node:16-alpine', 'n': 3, 'mean_s': 49.12, 'sd_s': 0.23}
+{'tool': 'grype', 'target': 'postgres:13', 'n': 3, 'mean_s': 63.57, 'sd_s': 3.33}
+{'tool': 'grype', 'target': 'python:3.12-alpine', 'n': 3, 'mean_s': 50.34, 'sd_s': 0.71}
+{'tool': 'grype', 'target': 'python:3.12-slim', 'n': 3, 'mean_s': 54.12, 'sd_s': 0.63}
+{'tool': 'grype', 'target': 'python:3.9-slim', 'n': 3, 'mean_s': 54.2, 'sd_s': 0.38}
+{'tool': 'grype', 'target': 'redis:6.2', 'n': 3, 'mean_s': 54.54, 'sd_s': 0.91}
+{'tool': 'grype', 'target': 'ubuntu:20.04', 'n': 3, 'mean_s': 51.73, 'sd_s': 1.9}
+{'tool': 'grype', 'target': 'ubuntu:24.04', 'n': 3, 'mean_s': 50.16, 'sd_s': 0.65}
+{'tool': 'grype-db', 'target': 'download', 'n': 1, 'mean_s': 2.74, 'sd_s': 0}
+{'tool': 'kics', 'target': 'iac', 'n': 3, 'mean_s': 6.03, 'sd_s': 0.62}
+{'tool': 'trivy', 'target': 'alpine:3.18', 'n': 3, 'mean_s': 0.67, 'sd_s': 0.01}
+{'tool': 'trivy', 'target': 'alpine:3.20', 'n': 3, 'mean_s': 0.77, 'sd_s': 0.1}
+{'tool': 'trivy', 'target': 'bkimminich/juice-shop:v15.0.0', 'n': 3, 'mean_s': 16.55, 'sd_s': 11.97}
+{'tool': 'trivy', 'target': 'centos:7', 'n': 3, 'mean_s': 5.3, 'sd_s': 1.79}
+{'tool': 'trivy', 'target': 'debian:11-slim', 'n': 3, 'mean_s': 2.63, 'sd_s': 1.0}
+{'tool': 'trivy', 'target': 'debian:12-slim', 'n': 3, 'mean_s': 1.94, 'sd_s': 0.64}
+{'tool': 'trivy', 'target': 'nginx:1.21', 'n': 3, 'mean_s': 4.64, 'sd_s': 4.05}
+{'tool': 'trivy', 'target': 'node:16-alpine', 'n': 3, 'mean_s': 2.53, 'sd_s': 1.07}
+{'tool': 'trivy', 'target': 'postgres:13', 'n': 3, 'mean_s': 10.87, 'sd_s': 6.29}
+{'tool': 'trivy', 'target': 'python:3.12-alpine', 'n': 3, 'mean_s': 1.92, 'sd_s': 0.78}
+{'tool': 'trivy', 'target': 'python:3.12-slim', 'n': 3, 'mean_s': 3.06, 'sd_s': 1.2}
+{'tool': 'trivy', 'target': 'python:3.9-slim', 'n': 3, 'mean_s': 3.07, 'sd_s': 1.72}
+{'tool': 'trivy', 'target': 'redis:6.2', 'n': 3, 'mean_s': 3.27, 'sd_s': 1.15}
+{'tool': 'trivy', 'target': 'ubuntu:20.04', 'n': 3, 'mean_s': 2.18, 'sd_s': 0.79}
+{'tool': 'trivy', 'target': 'ubuntu:24.04', 'n': 3, 'mean_s': 2.02, 'sd_s': 0.8}
+{'tool': 'trivy-config', 'target': 'iac', 'n': 3, 'mean_s': 1.53, 'sd_s': 0.52}
+{'tool': 'trivy-db', 'target': 'download', 'n': 1, 'mean_s': 0.59, 'sd_s': 0}
+{'tool': 'trivy-javadb', 'target': 'download', 'n': 1, 'mean_s': 241.3, 'sd_s': 0}

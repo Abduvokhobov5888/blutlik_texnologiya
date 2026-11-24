@@ -1,0 +1,38 @@
+# ATAYLAB XATO QILINGAN TEST FAYLI. Namespace ko'rsatilmagan (K8S-11).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-insecure-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insecure
+  template:
+    metadata:
+      labels:
+        app: insecure
+    spec:
+      hostNetwork: true            # K8S-05
+      hostPID: true                # K8S-06
+      containers:
+        - name: app
+          image: nginx:latest      # K8S-07
+          securityContext:
+            privileged: true                 # K8S-01
+            allowPrivilegeEscalation: true   # K8S-02
+            runAsUser: 0                     # K8S-03
+            readOnlyRootFilesystem: false    # K8S-04
+            capabilities:
+              add: ["SYS_ADMIN"]             # K8S-08
+          env:
+            - name: DB_PASSWORD
+              value: "SuperSecret123!"       # K8S-09
+          volumeMounts:
+            - name: host-root
+              mountPath: /host
+          # K8S-10: resources (limits) yo'q; K8S-12: seccomp profili yo'q
+      volumes:
+        - name: host-root
+          hostPath:
+            path: /                          # K8S-13

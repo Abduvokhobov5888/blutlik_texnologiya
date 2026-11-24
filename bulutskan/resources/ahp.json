@@ -1,0 +1,573 @@
+{
+ "C": [
+  "K1",
+  "K2",
+  "K3",
+  "K4",
+  "K5",
+  "K6",
+  "K7"
+ ],
+ "names": {
+  "K1": "Funksional qamrov",
+  "K2": "Aniqlash sifati",
+  "K3": "CI/CD integratsiyasi",
+  "K4": "Moslashuvchanlik va me’yoriy xaritalash",
+  "K5": "Iqtisodiy samaradorlik",
+  "K6": "Ta’minot zanjiri xavfsizligi",
+  "K7": "Normativ muvofiqlik va ma’lumotlar mahalliyligi"
+ },
+ "A": [
+  [
+   1.0,
+   0.5,
+   3.0,
+   3.0,
+   2.0,
+   1.0,
+   1.0
+  ],
+  [
+   2.0,
+   1.0,
+   4.0,
+   4.0,
+   3.0,
+   2.0,
+   2.0
+  ],
+  [
+   0.3333333333333333,
+   0.25,
+   1.0,
+   1.0,
+   0.5,
+   0.3333333333333333,
+   0.3333333333333333
+  ],
+  [
+   0.3333333333333333,
+   0.25,
+   1.0,
+   1.0,
+   0.5,
+   0.3333333333333333,
+   0.3333333333333333
+  ],
+  [
+   0.5,
+   0.3333333333333333,
+   2.0,
+   2.0,
+   1.0,
+   0.5,
+   0.5
+  ],
+  [
+   1.0,
+   0.5,
+   3.0,
+   3.0,
+   2.0,
+   1.0,
+   1.0
+  ],
+  [
+   1.0,
+   0.5,
+   3.0,
+   3.0,
+   2.0,
+   1.0,
+   1.0
+  ]
+ ],
+ "w": [
+  0.1673559301882817,
+  0.2888478453442642,
+  0.05695067952259022,
+  0.05695067952259022,
+  0.09518300504570969,
+  0.1673559301882819,
+  0.1673559301882819
+ ],
+ "w_gm": [
+  0.16798000924338677,
+  0.2871622961144024,
+  0.0569434596176225,
+  0.0569434596176225,
+  0.09501075692019251,
+  0.16798000924338677,
+  0.16798000924338677
+ ],
+ "lam": 7.042247018901628,
+ "CI": 0.007041169816938068,
+ "CR": 0.005334219558286415,
+ "T": [
+  "Trivy",
+  "Grype",
+  "Checkov",
+  "KICS",
+  "Prowler",
+  "Wiz",
+  "Cortex Cloud",
+  "MS Defender for Cloud"
+ ],
+ "S": {
+  "Trivy": [
+   4,
+   4,
+   5,
+   4,
+   5,
+   2,
+   4
+  ],
+  "Grype": [
+   2,
+   4,
+   5,
+   2,
+   5,
+   4,
+   4
+  ],
+  "Checkov": [
+   3,
+   3,
+   5,
+   5,
+   5,
+   3,
+   4
+  ],
+  "KICS": [
+   3,
+   3,
+   5,
+   4,
+   5,
+   1,
+   4
+  ],
+  "Prowler": [
+   3,
+   3,
+   4,
+   5,
+   5,
+   3,
+   4
+  ],
+  "Wiz": [
+   5,
+   3,
+   4,
+   5,
+   1,
+   3,
+   2
+  ],
+  "Cortex Cloud": [
+   5,
+   3,
+   4,
+   5,
+   1,
+   3,
+   2
+  ],
+  "MS Defender for Cloud": [
+   4,
+   3,
+   3,
+   4,
+   3,
+   3,
+   2
+  ]
+ },
+ "score": [
+  3.8174218241917353,
+  3.7035204651465556,
+  3.585524658370062,
+  3.1938621184709075,
+  3.5285739788474713,
+  3.1478419586646322,
+  3.1478419586646322,
+  3.0569506795225894
+ ],
+ "order": [
+  0,
+  1,
+  2,
+  4,
+  3,
+  5,
+  6,
+  7
+ ],
+ "scen": {
+  "Davlat tashkiloti (K7 va K6 ustuvor)": {
+   "w": [
+    0.125,
+    0.216,
+    0.043,
+    0.043,
+    0.071,
+    0.251,
+    0.251
+   ],
+   "rank": [
+    [
+     "Grype",
+     3.778
+    ],
+    [
+     "Trivy",
+     3.612
+    ],
+    [
+     "Checkov",
+     3.564
+    ],
+    [
+     "Prowler",
+     3.521
+    ],
+    [
+     "KICS",
+     3.02
+    ],
+    [
+     "Wiz",
+     2.985
+    ],
+    [
+     "Cortex Cloud",
+     2.985
+    ],
+    [
+     "MS Defender for Cloud",
+     2.917
+    ]
+   ]
+  },
+  "Yirik korporativ (K1 va K2 ustuvor, K5 past)": {
+   "w": [
+    0.269,
+    0.348,
+    0.046,
+    0.046,
+    0.023,
+    0.134,
+    0.134
+   ],
+   "rank": [
+    [
+     "Trivy",
+     3.8
+    ],
+    [
+     "Wiz",
+     3.495
+    ],
+    [
+     "Cortex Cloud",
+     3.495
+    ],
+    [
+     "Grype",
+     3.44
+    ],
+    [
+     "Checkov",
+     3.363
+    ],
+    [
+     "Prowler",
+     3.317
+    ],
+    [
+     "MS Defender for Cloud",
+     3.18
+    ],
+    [
+     "KICS",
+     3.049
+    ]
+   ]
+  },
+  "Kichik tashkilot (K5 ustuvor)": {
+   "w": [
+    0.141,
+    0.243,
+    0.048,
+    0.048,
+    0.24,
+    0.141,
+    0.141
+   ],
+   "rank": [
+    [
+     "Trivy",
+     4.007
+    ],
+    [
+     "Grype",
+     3.911
+    ],
+    [
+     "Checkov",
+     3.812
+    ],
+    [
+     "Prowler",
+     3.764
+    ],
+    [
+     "KICS",
+     3.483
+    ],
+    [
+     "MS Defender for Cloud",
+     3.048
+    ],
+    [
+     "Wiz",
+     2.804
+    ],
+    [
+     "Cortex Cloud",
+     2.804
+    ]
+   ]
+  }
+ },
+ "sens": {
+  "K1x0.5": {
+   "top3": [
+    "Grype",
+    "Trivy",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K1x0.8": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K1x1.2": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K1x1.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K2x0.5": {
+   "top3": [
+    "Trivy",
+    "Checkov",
+    "Grype"
+   ],
+   "same": false
+  },
+  "K2x0.8": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K2x1.2": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K2x1.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K3x0.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K3x0.8": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K3x1.2": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K3x1.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K4x0.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K4x0.8": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K4x1.2": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K4x1.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K5x0.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K5x0.8": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K5x1.2": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K5x1.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K6x0.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K6x0.8": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K6x1.2": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K6x1.5": {
+   "top3": [
+    "Grype",
+    "Trivy",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K7x0.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K7x0.8": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": false
+  },
+  "K7x1.2": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  },
+  "K7x1.5": {
+   "top3": [
+    "Trivy",
+    "Grype",
+    "Checkov"
+   ],
+   "same": true
+  }
+ }
+}

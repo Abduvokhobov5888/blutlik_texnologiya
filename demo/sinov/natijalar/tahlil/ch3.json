@@ -1,0 +1,1265 @@
+{
+ "images": [
+  {
+   "image": "debian:12-slim",
+   "group": "A",
+   "g_n": 107,
+   "g_fix": 0,
+   "g_cpe": 0,
+   "g_crit": 1,
+   "g_high": 18,
+   "g_det": true,
+   "t_n": 120,
+   "t_fix": 0,
+   "eosl": false,
+   "os": "debian 12.15",
+   "t_crit": 1,
+   "t_high": 10,
+   "t_det": true,
+   "common": 107,
+   "only_t": 13,
+   "only_g": 0,
+   "j": 0.8916666666666667,
+   "c_tg": 0.8916666666666667,
+   "c_gt": 1.0,
+   "j_core": 0.9907407407407407
+  },
+  {
+   "image": "ubuntu:24.04",
+   "group": "A",
+   "g_n": 49,
+   "g_fix": 6,
+   "g_cpe": 0,
+   "g_crit": 0,
+   "g_high": 0,
+   "g_det": true,
+   "t_n": 20,
+   "t_fix": 6,
+   "eosl": false,
+   "os": "ubuntu 24.04",
+   "t_crit": 0,
+   "t_high": 0,
+   "t_det": true,
+   "common": 20,
+   "only_t": 0,
+   "only_g": 29,
+   "j": 0.40816326530612246,
+   "c_tg": 1.0,
+   "c_gt": 0.40816326530612246,
+   "j_core": 0.40816326530612246
+  },
+  {
+   "image": "python:3.12-slim",
+   "group": "A",
+   "g_n": 106,
+   "g_fix": 19,
+   "g_cpe": 13,
+   "g_crit": 0,
+   "g_high": 24,
+   "g_det": true,
+   "t_n": 105,
+   "t_fix": 6,
+   "eosl": false,
+   "os": "debian 13.8",
+   "t_crit": 0,
+   "t_high": 13,
+   "t_det": true,
+   "common": 93,
+   "only_t": 12,
+   "only_g": 13,
+   "j": 0.788135593220339,
+   "c_tg": 0.8857142857142857,
+   "c_gt": 0.8773584905660378,
+   "j_core": 1.0
+  },
+  {
+   "image": "python:3.12-alpine",
+   "group": "A",
+   "g_n": 65,
+   "g_fix": 46,
+   "g_cpe": 32,
+   "g_crit": 1,
+   "g_high": 22,
+   "g_det": true,
+   "t_n": 33,
+   "t_fix": 33,
+   "eosl": false,
+   "os": "alpine 3.24.4",
+   "t_crit": 0,
+   "t_high": 16,
+   "t_det": true,
+   "common": 33,
+   "only_t": 0,
+   "only_g": 32,
+   "j": 0.5076923076923077,
+   "c_tg": 1.0,
+   "c_gt": 0.5076923076923077,
+   "j_core": 1.0
+  },
+  {
+   "image": "alpine:3.18",
+   "group": "B",
+   "g_n": 6,
+   "g_fix": 0,
+   "g_cpe": 6,
+   "g_crit": 0,
+   "g_high": 1,
+   "g_det": true,
+   "t_n": 0,
+   "t_fix": 0,
+   "eosl": true,
+   "os": "alpine 3.18.12",
+   "t_crit": 0,
+   "t_high": 0,
+   "t_det": true,
+   "common": 0,
+   "only_t": 0,
+   "only_g": 6,
+   "j": 0.0,
+   "c_tg": null,
+   "c_gt": 0.0,
+   "j_core": 1.0
+  },
+  {
+   "image": "alpine:3.20",
+   "group": "B",
+   "g_n": 3,
+   "g_fix": 1,
+   "g_cpe": 2,
+   "g_crit": 0,
+   "g_high": 2,
+   "g_det": true,
+   "t_n": 1,
+   "t_fix": 1,
+   "eosl": true,
+   "os": "alpine 3.20.10",
+   "t_crit": 0,
+   "t_high": 1,
+   "t_det": true,
+   "common": 1,
+   "only_t": 0,
+   "only_g": 2,
+   "j": 0.3333333333333333,
+   "c_tg": 1.0,
+   "c_gt": 0.3333333333333333,
+   "j_core": 1.0
+  },
+  {
+   "image": "debian:11-slim",
+   "group": "B",
+   "g_n": 110,
+   "g_fix": 0,
+   "g_cpe": 0,
+   "g_crit": 8,
+   "g_high": 22,
+   "g_det": true,
+   "t_n": 211,
+   "t_fix": 0,
+   "eosl": true,
+   "os": "debian 11.11",
+   "t_crit": 5,
+   "t_high": 41,
+   "t_det": true,
+   "common": 109,
+   "only_t": 102,
+   "only_g": 1,
+   "j": 0.5141509433962265,
+   "c_tg": 0.5165876777251185,
+   "c_gt": 0.990909090909091,
+   "j_core": 0.5477386934673367
+  },
+  {
+   "image": "ubuntu:20.04",
+   "group": "B",
+   "g_n": 155,
+   "g_fix": 1,
+   "g_cpe": 0,
+   "g_crit": 0,
+   "g_high": 2,
+   "g_det": true,
+   "t_n": 1,
+   "t_fix": 1,
+   "eosl": true,
+   "os": "ubuntu 20.04",
+   "t_crit": 0,
+   "t_high": 0,
+   "t_det": true,
+   "common": 1,
+   "only_t": 0,
+   "only_g": 154,
+   "j": 0.0064516129032258064,
+   "c_tg": 1.0,
+   "c_gt": 0.0064516129032258064,
+   "j_core": 0.0064516129032258064
+  },
+  {
+   "image": "centos:7",
+   "group": "B",
+   "g_n": 1222,
+   "g_fix": 69,
+   "g_cpe": 0,
+   "g_crit": 4,
+   "g_high": 109,
+   "g_det": true,
+   "t_n": 1213,
+   "t_fix": 147,
+   "eosl": true,
+   "os": "centos 7.9.2009",
+   "t_crit": 2,
+   "t_high": 94,
+   "t_det": true,
+   "common": 1193,
+   "only_t": 20,
+   "only_g": 29,
+   "j": 0.9605475040257649,
+   "c_tg": 0.9835119538334708,
+   "c_gt": 0.9762684124386252,
+   "j_core": 0.9605475040257649
+  },
+  {
+   "image": "python:3.9-slim",
+   "group": "B",
+   "g_n": 276,
+   "g_fix": 188,
+   "g_cpe": 54,
+   "g_crit": 13,
+   "g_high": 94,
+   "g_det": true,
+   "t_n": 237,
+   "t_fix": 138,
+   "eosl": false,
+   "os": "debian 13.1",
+   "t_crit": 4,
+   "t_high": 42,
+   "t_det": true,
+   "common": 222,
+   "only_t": 15,
+   "only_g": 54,
+   "j": 0.7628865979381443,
+   "c_tg": 0.9367088607594937,
+   "c_gt": 0.8043478260869565,
+   "j_core": 0.9954954954954955
+  },
+  {
+   "image": "node:16-alpine",
+   "group": "B",
+   "g_n": 110,
+   "g_fix": 102,
+   "g_cpe": 62,
+   "g_crit": 4,
+   "g_high": 47,
+   "g_det": true,
+   "t_n": 48,
+   "t_fix": 47,
+   "eosl": true,
+   "os": "alpine 3.18.3",
+   "t_crit": 1,
+   "t_high": 22,
+   "t_det": true,
+   "common": 48,
+   "only_t": 0,
+   "only_g": 62,
+   "j": 0.43636363636363634,
+   "c_tg": 1.0,
+   "c_gt": 0.43636363636363634,
+   "j_core": 1.0
+  },
+  {
+   "image": "nginx:1.21",
+   "group": "C",
+   "g_n": 508,
+   "g_fix": 278,
+   "g_cpe": 0,
+   "g_crit": 36,
+   "g_high": 158,
+   "g_det": true,
+   "t_n": 683,
+   "t_fix": 288,
+   "eosl": true,
+   "os": "debian 11.3",
+   "t_crit": 23,
+   "t_high": 167,
+   "t_det": true,
+   "common": 502,
+   "only_t": 181,
+   "only_g": 6,
+   "j": 0.7285921625544267,
+   "c_tg": 0.7349926793557833,
+   "c_gt": 0.9881889763779528,
+   "j_core": 0.7594553706505295
+  },
+  {
+   "image": "postgres:13",
+   "group": "C",
+   "g_n": 305,
+   "g_fix": 169,
+   "g_cpe": 0,
+   "g_crit": 14,
+   "g_high": 106,
+   "g_det": true,
+   "t_n": 380,
+   "t_fix": 232,
+   "eosl": false,
+   "os": "debian 13.1",
+   "t_crit": 8,
+   "t_high": 93,
+   "t_det": true,
+   "common": 305,
+   "only_t": 75,
+   "only_g": 0,
+   "j": 0.8026315789473685,
+   "c_tg": 0.8026315789473685,
+   "c_gt": 1.0,
+   "j_core": 0.8333333333333334
+  },
+  {
+   "image": "redis:6.2",
+   "group": "C",
+   "g_n": 117,
+   "g_fix": 0,
+   "g_cpe": 2,
+   "g_crit": 1,
+   "g_high": 23,
+   "g_det": true,
+   "t_n": 128,
+   "t_fix": 0,
+   "eosl": false,
+   "os": "debian 12.15",
+   "t_crit": 1,
+   "t_high": 11,
+   "t_det": true,
+   "common": 115,
+   "only_t": 13,
+   "only_g": 2,
+   "j": 0.8846153846153846,
+   "c_tg": 0.8984375,
+   "c_gt": 0.9829059829059829,
+   "j_core": 0.9913793103448276
+  },
+  {
+   "image": "bkimminich/juice-shop:v15.0.0",
+   "group": "D",
+   "g_n": 390,
+   "g_fix": 345,
+   "g_cpe": 64,
+   "g_crit": 58,
+   "g_high": 168,
+   "g_det": true,
+   "t_n": 373,
+   "t_fix": 292,
+   "eosl": true,
+   "os": "debian 11.6",
+   "t_crit": 50,
+   "t_high": 125,
+   "t_det": true,
+   "common": 325,
+   "only_t": 48,
+   "only_g": 65,
+   "j": 0.7420091324200914,
+   "c_tg": 0.871313672922252,
+   "c_gt": 0.8333333333333334,
+   "j_core": 0.860655737704918
+  }
+ ],
+ "overall": {
+  "t": 3553,
+  "g": 3529,
+  "common": 3074,
+  "j": 0.7669660678642715,
+  "j_core": 0.8371139655643618,
+  "tc": 3428,
+  "gc": 3294,
+  "common_core": 3063
+ },
+ "groups": {
+  "A": {
+   "t": 278,
+   "g": 327,
+   "common": 253,
+   "j": 0.71875
+  },
+  "B": {
+   "t": 1711,
+   "g": 1882,
+   "common": 1574,
+   "j": 0.7795938583457157
+  },
+  "C": {
+   "t": 1191,
+   "g": 930,
+   "common": 922,
+   "j": 0.7689741451209341
+  },
+  "D": {
+   "t": 373,
+   "g": 390,
+   "common": 325,
+   "j": 0.7420091324200914
+  }
+ },
+ "causes": {
+  "T: CVE bo‘lmagan identifikatorlar (TEMP/DSA/DLA/GHSA)": 114,
+  "T: boshqa": 25,
+  "G: «tuzatilmaydi» (wont-fix) holatidagi yozuvlar": 168,
+  "G: boshqa": 52,
+  "G: binar fayl / CPE bo‘yicha moslik": 235,
+  "T: Debian 11 bo‘yicha 2026-yilgi yangi yozuvlar": 279,
+  "T: Go binar fayllari (stdlib)": 61
+ },
+ "timing": [
+  {
+   "tool": "checkov",
+   "target": "iac",
+   "runs": [
+    3.39,
+    3.78,
+    3.57
+   ],
+   "mean": 3.58,
+   "sd": 0.1951922129594312,
+   "warm": 3.675,
+   "codes": [
+    "1",
+    "1",
+    "1"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "alpine:3.18",
+   "runs": [
+    48.47,
+    48.06,
+    49.16
+   ],
+   "mean": 48.56333333333333,
+   "sd": 0.5559076661940634,
+   "warm": 48.61,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "alpine:3.20",
+   "runs": [
+    48.7,
+    54.72,
+    57.25
+   ],
+   "mean": 53.556666666666665,
+   "sd": 4.392110350769129,
+   "warm": 55.985,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "bkimminich/juice-shop:v15.0.0",
+   "runs": [
+    51.59,
+    52.88,
+    53.12
+   ],
+   "mean": 52.53,
+   "sd": 0.8228608630868259,
+   "warm": 53.0,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "centos:7",
+   "runs": [
+    58.08,
+    60.4,
+    57.97
+   ],
+   "mean": 58.81666666666666,
+   "sd": 1.3723094889030438,
+   "warm": 59.185,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "debian:11-slim",
+   "runs": [
+    57.33,
+    52.45,
+    52.15
+   ],
+   "mean": 53.97666666666667,
+   "sd": 2.9079431447903734,
+   "warm": 52.3,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "debian:12-slim",
+   "runs": [
+    50.3,
+    49.43,
+    49.86
+   ],
+   "mean": 49.86333333333333,
+   "sd": 0.43500957843860427,
+   "warm": 49.644999999999996,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "nginx:1.21",
+   "runs": [
+    58.68,
+    60.09,
+    59.85
+   ],
+   "mean": 59.54,
+   "sd": 0.7543871685016935,
+   "warm": 59.97,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "node:16-alpine",
+   "runs": [
+    48.9,
+    49.36,
+    49.1
+   ],
+   "mean": 49.12,
+   "sd": 0.23065125189341623,
+   "warm": 49.230000000000004,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "postgres:13",
+   "runs": [
+    61.42,
+    61.88,
+    67.41
+   ],
+   "mean": 63.57,
+   "sd": 3.3334816633663937,
+   "warm": 64.645,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "python:3.12-alpine",
+   "runs": [
+    50.5,
+    50.95,
+    49.56
+   ],
+   "mean": 50.336666666666666,
+   "sd": 0.7092484285025475,
+   "warm": 50.255,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "python:3.12-slim",
+   "runs": [
+    53.62,
+    54.82,
+    53.91
+   ],
+   "mean": 54.11666666666667,
+   "sd": 0.6261256529909436,
+   "warm": 54.364999999999995,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "python:3.9-slim",
+   "runs": [
+    54.47,
+    53.76,
+    54.36
+   ],
+   "mean": 54.196666666666665,
+   "sd": 0.3821430796617071,
+   "warm": 54.06,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "redis:6.2",
+   "runs": [
+    55.55,
+    54.26,
+    53.8
+   ],
+   "mean": 54.53666666666666,
+   "sd": 0.9072118458956172,
+   "warm": 54.03,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "ubuntu:20.04",
+   "runs": [
+    49.84,
+    51.73,
+    53.63
+   ],
+   "mean": 51.733333333333334,
+   "sd": 1.8950021987674135,
+   "warm": 52.68,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype",
+   "target": "ubuntu:24.04",
+   "runs": [
+    50.46,
+    49.41,
+    50.61
+   ],
+   "mean": 50.16,
+   "sd": 0.6538348415311029,
+   "warm": 50.01,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "grype-db",
+   "target": "download",
+   "runs": [
+    2.74
+   ],
+   "mean": 2.74,
+   "sd": 0,
+   "warm": 2.74,
+   "codes": [
+    "0"
+   ]
+  },
+  {
+   "tool": "kics",
+   "target": "iac",
+   "runs": [
+    6.73,
+    5.77,
+    5.58
+   ],
+   "mean": 6.026666666666666,
+   "sd": 0.6164684366075313,
+   "warm": 5.675,
+   "codes": [
+    "60",
+    "60",
+    "60"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "alpine:3.18",
+   "runs": [
+    0.67,
+    0.68,
+    0.67
+   ],
+   "mean": 0.6733333333333333,
+   "sd": 0.005773502691896263,
+   "warm": 0.675,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "alpine:3.20",
+   "runs": [
+    0.85,
+    0.66,
+    0.8
+   ],
+   "mean": 0.77,
+   "sd": 0.09848857801796103,
+   "warm": 0.73,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "bkimminich/juice-shop:v15.0.0",
+   "runs": [
+    30.37,
+    9.78,
+    9.51
+   ],
+   "mean": 16.553333333333335,
+   "sd": 11.96634586385223,
+   "warm": 9.645,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "centos:7",
+   "runs": [
+    7.37,
+    4.3,
+    4.24
+   ],
+   "mean": 5.303333333333334,
+   "sd": 1.7900372435604053,
+   "warm": 4.27,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "debian:11-slim",
+   "runs": [
+    3.79,
+    2.07,
+    2.04
+   ],
+   "mean": 2.6333333333333333,
+   "sd": 1.00181501951874,
+   "warm": 2.0549999999999997,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "debian:12-slim",
+   "runs": [
+    2.68,
+    1.58,
+    1.55
+   ],
+   "mean": 1.9366666666666668,
+   "sd": 0.6439202849214594,
+   "warm": 1.565,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "nginx:1.21",
+   "runs": [
+    9.32,
+    2.38,
+    2.22
+   ],
+   "mean": 4.640000000000001,
+   "sd": 4.053788351653303,
+   "warm": 2.3,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "node:16-alpine",
+   "runs": [
+    3.77,
+    1.9,
+    1.92
+   ],
+   "mean": 2.53,
+   "sd": 1.0739180601889513,
+   "warm": 1.91,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "postgres:13",
+   "runs": [
+    18.13,
+    7.38,
+    7.11
+   ],
+   "mean": 10.873333333333333,
+   "sd": 6.285907518674875,
+   "warm": 7.245,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "python:3.12-alpine",
+   "runs": [
+    2.82,
+    1.49,
+    1.44
+   ],
+   "mean": 1.9166666666666665,
+   "sd": 0.7827089710315919,
+   "warm": 1.4649999999999999,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "python:3.12-slim",
+   "runs": [
+    4.44,
+    2.38,
+    2.35
+   ],
+   "mean": 3.0566666666666666,
+   "sd": 1.1980957112573827,
+   "warm": 2.365,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "python:3.9-slim",
+   "runs": [
+    5.06,
+    2.05,
+    2.1
+   ],
+   "mean": 3.07,
+   "sd": 1.7235718725948157,
+   "warm": 2.075,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "redis:6.2",
+   "runs": [
+    4.59,
+    2.67,
+    2.54
+   ],
+   "mean": 3.2666666666666666,
+   "sd": 1.1478821077677503,
+   "warm": 2.605,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "ubuntu:20.04",
+   "runs": [
+    3.1,
+    1.7,
+    1.75
+   ],
+   "mean": 2.1833333333333336,
+   "sd": 0.7942501704962571,
+   "warm": 1.725,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy",
+   "target": "ubuntu:24.04",
+   "runs": [
+    2.94,
+    1.56,
+    1.55
+   ],
+   "mean": 2.0166666666666666,
+   "sd": 0.79964575490234,
+   "warm": 1.5550000000000002,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy-config",
+   "target": "iac",
+   "runs": [
+    2.13,
+    1.25,
+    1.21
+   ],
+   "mean": 1.53,
+   "sd": 0.52,
+   "warm": 1.23,
+   "codes": [
+    "0",
+    "0",
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy-db",
+   "target": "download",
+   "runs": [
+    0.59
+   ],
+   "mean": 0.59,
+   "sd": 0,
+   "warm": 0.59,
+   "codes": [
+    "0"
+   ]
+  },
+  {
+   "tool": "trivy-javadb",
+   "target": "download",
+   "runs": [
+    241.3
+   ],
+   "mean": 241.3,
+   "sd": 0,
+   "warm": 241.3,
+   "codes": [
+    "0"
+   ]
+  }
+ ],
+ "iac": {
+  "Checkov": {
+   "gt": 40,
+   "tp": 36,
+   "fn": 4,
+   "fp": 0,
+   "recall": 0.9,
+   "precision": 1.0,
+   "f1": 0.9473684210526316,
+   "groups": {
+    "TF": {
+     "n": 20,
+     "tp": 19,
+     "fp": 0
+    },
+    "K8S": {
+     "n": 13,
+     "tp": 11,
+     "fp": 0
+    },
+    "DF": {
+     "n": 7,
+     "tp": 6,
+     "fp": 0
+    }
+   },
+   "findings_total": 102,
+   "findings_insecure": 79,
+   "findings_secure": 23,
+   "findings_unmatched_insecure": 30,
+   "runs": 3,
+   "run_counts": [
+    102,
+    102,
+    102
+   ],
+   "detected_ids": [
+    "DF-01",
+    "DF-02",
+    "DF-04",
+    "DF-05",
+    "DF-06",
+    "DF-07",
+    "K8S-01",
+    "K8S-02",
+    "K8S-03",
+    "K8S-04",
+    "K8S-05",
+    "K8S-06",
+    "K8S-07",
+    "K8S-08",
+    "K8S-10",
+    "K8S-11",
+    "K8S-12",
+    "TF-01",
+    "TF-02",
+    "TF-03",
+    "TF-04",
+    "TF-05",
+    "TF-06",
+    "TF-07",
+    "TF-08",
+    "TF-09",
+    "TF-10",
+    "TF-11",
+    "TF-13",
+    "TF-14",
+    "TF-15",
+    "TF-16",
+    "TF-17",
+    "TF-18",
+    "TF-19",
+    "TF-20"
+   ],
+   "fp_ids": []
+  },
+  "KICS": {
+   "gt": 40,
+   "tp": 34,
+   "fn": 6,
+   "fp": 0,
+   "recall": 0.85,
+   "precision": 1.0,
+   "f1": 0.9189189189189189,
+   "groups": {
+    "TF": {
+     "n": 20,
+     "tp": 17,
+     "fp": 0
+    },
+    "K8S": {
+     "n": 13,
+     "tp": 12,
+     "fp": 0
+    },
+    "DF": {
+     "n": 7,
+     "tp": 5,
+     "fp": 0
+    }
+   },
+   "findings_total": 116,
+   "findings_insecure": 83,
+   "findings_secure": 33,
+   "findings_unmatched_insecure": 39,
+   "runs": 3,
+   "run_counts": [
+    116,
+    116,
+    116
+   ],
+   "detected_ids": [
+    "DF-01",
+    "DF-02",
+    "DF-05",
+    "DF-06",
+    "DF-07",
+    "K8S-01",
+    "K8S-02",
+    "K8S-03",
+    "K8S-04",
+    "K8S-05",
+    "K8S-06",
+    "K8S-07",
+    "K8S-08",
+    "K8S-10",
+    "K8S-11",
+    "K8S-12",
+    "K8S-13",
+    "TF-01",
+    "TF-02",
+    "TF-05",
+    "TF-06",
+    "TF-07",
+    "TF-08",
+    "TF-09",
+    "TF-10",
+    "TF-11",
+    "TF-12",
+    "TF-13",
+    "TF-14",
+    "TF-15",
+    "TF-16",
+    "TF-17",
+    "TF-18",
+    "TF-19"
+   ],
+   "fp_ids": []
+  },
+  "Trivy (config)": {
+   "gt": 40,
+   "tp": 32,
+   "fn": 8,
+   "fp": 0,
+   "recall": 0.8,
+   "precision": 1.0,
+   "f1": 0.888888888888889,
+   "groups": {
+    "TF": {
+     "n": 20,
+     "tp": 15,
+     "fp": 0
+    },
+    "K8S": {
+     "n": 13,
+     "tp": 12,
+     "fp": 0
+    },
+    "DF": {
+     "n": 7,
+     "tp": 5,
+     "fp": 0
+    }
+   },
+   "findings_total": 66,
+   "findings_insecure": 58,
+   "findings_secure": 8,
+   "findings_unmatched_insecure": 15,
+   "runs": 3,
+   "run_counts": [
+    66,
+    66,
+    66
+   ],
+   "detected_ids": [
+    "DF-01",
+    "DF-04",
+    "DF-05",
+    "DF-06",
+    "DF-07",
+    "K8S-01",
+    "K8S-02",
+    "K8S-03",
+    "K8S-04",
+    "K8S-05",
+    "K8S-06",
+    "K8S-07",
+    "K8S-08",
+    "K8S-10",
+    "K8S-11",
+    "K8S-12",
+    "K8S-13",
+    "TF-02",
+    "TF-03",
+    "TF-04",
+    "TF-05",
+    "TF-06",
+    "TF-07",
+    "TF-08",
+    "TF-09",
+    "TF-10",
+    "TF-11",
+    "TF-13",
+    "TF-14",
+    "TF-17",
+    "TF-18",
+    "TF-19"
+   ],
+   "fp_ids": []
+  }
+ },
+ "iac_overlap": {
+  "Checkov vs KICS": {
+   "both": 32,
+   "only_a": 4,
+   "only_b": 2,
+   "jaccard": 0.8421052631578947
+  },
+  "Checkov vs Trivy (config)": {
+   "both": 31,
+   "only_a": 5,
+   "only_b": 1,
+   "jaccard": 0.8378378378378378
+  },
+  "KICS vs Trivy (config)": {
+   "both": 29,
+   "only_a": 5,
+   "only_b": 3,
+   "jaccard": 0.7837837837837838
+  }
+ },
+ "missed_by_all": [
+  "DF-03",
+  "K8S-09"
+ ],
+ "db": {
+  "trivy": {
+   "Version": 2,
+   "UpdatedAt": "2026-11-24T07:08:30.893544587Z",
+   "NextUpdate": "2026-11-25T07:08:30.893544124Z",
+   "DownloadedAt": "2026-11-24T12:25:41.555938036Z"
+  },
+  "grype": "Path:      /cache/6/vulnerability.db\nSchema:    v6.1.10\nBuilt:     2026-11-24T06:22:05Z\nFrom:      https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-11-24T00:20:31Z_1795501325.tar.zst?checksum=sha256%3Afdf0cdec0b112f6769c3fd38cd5f992a3bb6162a4ab2fe30d639d14ae41ea8a9\nStatus:    valid"
+ }
+}

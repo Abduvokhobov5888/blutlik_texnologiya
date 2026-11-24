@@ -57,13 +57,13 @@ def test_evaluation_matches_analyze(gt: GroundTruth, summary: dict) -> None:
         assert got.findings_secure == expected["findings_secure"]
         assert got.findings_unmatched_insecure == expected["findings_unmatched_insecure"]
     for pair, expected in summary["iac_overlap"].items():
-        got = ev.overlap[pair]
-        assert (got["both"], got["only_a"], got["only_b"]) == (
+        pair_got = ev.overlap[pair]
+        assert (pair_got["both"], pair_got["only_a"], pair_got["only_b"]) == (
             expected["both"],
             expected["only_a"],
             expected["only_b"],
         )
-        assert got["jaccard"] == pytest.approx(expected["jaccard"])
+        assert pair_got["jaccard"] == pytest.approx(expected["jaccard"])
     assert list(ev.missed_by_all) == summary["missed_by_all"]
 
 

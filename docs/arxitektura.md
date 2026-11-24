@@ -1,6 +1,6 @@
 # BulutSkan arxitekturasi
 
-> **Holat:** 2-bosqich bajarildi: yagona model, parserlar, konsensus, EOL va AHP yozilgan va testlangan.
+> **Holat:** 3-bosqich bajarildi: xavfsiz skaner moduli, digest tekshiruvi, bazalarni yangilash, fayl yuklash himoyasi, tekshiruv quvuri va CLI ning asosiy buyruqlari. Haqiqiy Docker bilan sinov ko‘rsatmasi: [windows_sinov.md](windows_sinov.md).
 > 1-bosqichda ⚠ bilan belgilangan joylar `Sinov` materiallari (`analyze.py`, `stats3.py`, `ground_truth.csv`, `run_tests.ps1`, `tool_digests.txt`, `ahp/`) asosida aniqlashtirildi.
 
 BulutSkan — bulutli infratuzilma kodini (IaC) va konteyner obrazlarini bir nechta ochiq kodli skaner bilan tekshiradigan mahalliy veb-platforma. U Andijon davlat universiteti magistranti Odilova Robiyaxonning “Bulutli hisoblash texnologiyalari xavfsizligini ta’minlovchi dasturiy vositalarni qiyosiy tahlil qilish va ochiq kodli vositalar samaradorligini baholash” mavzusidagi dissertatsiyasining amaliy natijasidir.
@@ -73,17 +73,20 @@ Veb-interfeys va CLI bir xil `services.pipeline` quvurini chaqiradi. Shu sababli
 | `bulutskan.core.consensus` | Vositalararo guruhlash, “Tasdiqlangan” va boshqa belgilar, Jaccard | 2 |
 | `bulutskan.core.eol` | Eskirgan bazaviy obrazni aniqlash | 2 |
 | `bulutskan.core.ahp` | AHP vaznlari, ballar, ssenariylar, reyting | 2 |
+| `bulutskan.core.gate` | `--fail-on` qarori, `--unknown-severity` siyosati | 3 |
 | `bulutskan.parsers.*` | Checkov, KICS, Trivy (image va config), Grype JSON parserlari (`analyze.py` asosida) | 2 |
 | `bulutskan.scanner.docker` | `docker` buyrug‘ini argumentlar ro‘yxati sifatida qurish va ishga tushirish | 3 |
+| `bulutskan.scanner.runs` | Vosita natijasi, qabul qilinadigan chiqish kodlari, xato izohlari | 3 |
 | `bulutskan.scanner.tools` | Vositalar reestri, digest yaxlitligini tekshirish | 3 |
 | `bulutskan.scanner.iac`, `.image` | IaC va obraz tekshiruvi ssenariylari | 3 |
 | `bulutskan.scanner.dbupdate` | Trivy, Trivy Java va Grype bazalarini yangilash | 3 |
 | `bulutskan.security.*` | Yuklash himoyasi, vaqtinchalik katalog, obraz nomi regexi, bcrypt | 3–4 |
-| `bulutskan.storage.*` | SQLAlchemy jadvallari va so‘rovlar | 3 |
+| `bulutskan.storage.*` | SQLAlchemy jadvallari va so‘rovlar | 4 |
 | `bulutskan.services.*` | Tekshiruv quvuri, fon navbati, solishtirish, demo-import | 3–7 |
 | `bulutskan.web.*` | FastAPI ilovasi, marshrutlar, shablonlar, statik fayllar | 4 |
-| `bulutskan.reporting.*` | DOCX hisobot va JSON eksport | 5 |
-| `bulutskan.cli` | Typer buyruqlari | 5, 7 |
+| `bulutskan.reporting.json_export` | JSON eksport | 3 |
+| `bulutskan.reporting.docx_report` | DOCX hisobot | 5 |
+| `bulutskan.cli` | Typer buyruqlari: `scan`, `db-update`, `db-status`, `tools` (3), `demo-import`, `user`, `serve` (4–7) | 3–7 |
 
 Kodda identifikatorlar ingliz tilida, izohlar va docstring’lar o‘zbek tilida yoziladi. Barcha funksiyalarda tur izohlari (type hints) bo‘ladi.
 
@@ -650,9 +653,9 @@ docker run --rm --pull never
   --security-opt no-new-privileges
   --cpus 2 --memory 2g --memory-swap 2g --pids-limit 512
   --env HOME=/tmp
-  --env HTTP_PROXY= --env HTTPS_PROXY= --env NO_PROXY=
-  --mount type=bind,source={workdir}/input,target=/scan,readonly
-  --mount type=bind,source={data}/db/trivy,target=/cache,readonly  # faqat Trivy va Grype
+  --env HTTP_PROXY= --env HTTPS_PROXY= --env NO_PROXY= (va kichik harfli nusxalari)
+  --mount type=bind,source={workdir}/input,target=/scan,readonly        # IaC
+  --mount type=bind,source={image.tar},target=/input/image.tar,readonly # obraz
   aquasec/trivy@sha256:{digest}
   {vosita argumentlari}
 ```
@@ -661,27 +664,34 @@ Izohlar:
 
 - `--pull never` digest bo‘yicha obraz kompyuterda yo‘q bo‘lsa, Docker uni jimgina yuklab olishiga yo‘l qo‘ymaydi.
 - Bo‘sh `HTTP_PROXY=` qiymatlari Docker CLI ning `config.json` dagi proksini konteynerga avtomatik uzatishini bekor qiladi. Tarmoq baribir yo‘q, lekin proksi manzili konteyner ichida ham ko‘rinmaydi.
-- `-v` o‘rniga `--mount` ishlatiladi: Windows yo‘lidagi `D:` ikki nuqtasi `-v` sintaksisini buzadi. Yo‘lda vergul bo‘lsa, tekshiruv xato bilan to‘xtaydi.
-- Timeout tugasa, konteyner `docker kill bulutskan-{uid}-{vosita}` bilan to‘xtatiladi.
-- Root bo‘lmagan foydalanuvchi (`--user`) har bir vosita bilan 3-bosqichda sinab ko‘riladi. Vosita shunday ishlay olsa, u yoqiladi.
+- `-v` o‘rniga `--mount` ishlatiladi: Windows yo‘lidagi `D:` ikki nuqtasi `-v` sintaksisini buzadi. Yo‘lda vergul yoki qo‘shtirnoq bo‘lsa, tekshiruv xato bilan to‘xtaydi.
+- Konteynerga muhit o‘zgaruvchisi faqat `KALIT=qiymat` ko‘rinishida beriladi. `docker` jarayonining o‘ziga ham xost muhitidan faqat zarur o‘zgaruvchilar (`PATH`, `DOCKER_HOST`, Windows tizim o‘zgaruvchilari) o‘tadi.
+- Timeout tugasa, konteyner `docker kill bulutskan-{uid}-{vosita}` bilan to‘xtatiladi. 137 chiqish kodi “xotira yetmadi” deb tushuntiriladi.
+- Root bo‘lmagan foydalanuvchi (`--user`) hali yoqilmagan: uni Windows’dagi haqiqiy sinovdan keyin har bir vosita bilan alohida sinab ko‘ramiz.
 
 Vositalarga xos argumentlar eksperimentdagi `run_tests.ps1` dan aynan olinadi. Shunday qilinsa, platforma III bobdagi natijalarni takrorlaydi:
 
-| Vosita | Asosiy argumentlar |
-|---|---|
-| Trivy image | `image --cache-dir /cache --skip-db-update --skip-java-db-update --offline-scan --scanners vuln --format json --input /input/image.tar` |
-| Trivy config | `config --skip-check-update --format json /scan` |
-| Grype | `docker-archive:/input/image.tar -o json`, muhit: `GRYPE_DB_CACHE_DIR=/cache`, `GRYPE_DB_AUTO_UPDATE=false`, `GRYPE_CHECK_FOR_APP_UPDATE=false` |
-| Checkov | `-d /scan --skip-download --quiet -o json` |
-| KICS | `scan -p /scan -o /out --report-formats json --no-progress` |
+| Vosita | Argumentlar | Qo‘shimcha ulanishlar |
+|---|---|---|
+| Trivy image | `image --cache-dir /tmp/trivy --skip-db-update --skip-java-db-update --offline-scan --scanners vuln --format json --input /input/image.tar` | `db/` → `/tmp/trivy/db` va `java-db/` → `/tmp/trivy/java-db`, ikkalasi faqat o‘qish uchun |
+| Trivy config | `config --skip-check-update --format json /scan` | — |
+| Grype | `docker-archive:/input/image.tar -o json`; muhit: `GRYPE_DB_CACHE_DIR=/cache`, `GRYPE_DB_AUTO_UPDATE=false`, `GRYPE_CHECK_FOR_APP_UPDATE=false`, `GRYPE_DB_VALIDATE_AGE`, `TMPDIR=/scratch` | baza → `/cache` faqat o‘qish uchun; `scratch/grype` → `/scratch` yozish uchun |
+| Checkov | `-d /scan --skip-download --quiet -o json --output-file-path /out` | `out/checkov` → `/out` yozish uchun |
+| KICS | `scan -p /scan -o /out --report-formats json --no-progress` | `out/kics` → `/out` yozish uchun |
 
-KICS natijani stdout ga emas, faylga yozadi. Shu sababli unga bitta istisno beriladi: `workdir/{uid}/out` katalogi yozish uchun ulanadi. Bu katalog bo‘sh holda ochiladi, faqat shu tekshiruvga tegishli va ish tugagach o‘chiriladi. `--disable-full-descriptions` KICS’ning tavsiflarni Checkmarx serveridan yuklashini o‘chiradi.
+Vositalar chiqish kodi: Checkov xato topsa 1, KICS eng yuqori daraja bo‘yicha 20–60 qaytaradi (eksperimentdagi `timings.csv` da ham shunday). Bu kodlar muvaffaqiyat deb qabul qilinadi.
 
-Trivy bazasini faqat o‘qish rejimida ochishi 3-bosqichda tekshiriladi. Agar u yozish huquqini talab qilsa, baza har tekshiruv uchun `workdir/{uid}` ichiga nusxalanadi va asl nusxa baribir faqat o‘qish uchun ulanadi.
+**Yozish uchun ulanadigan kataloglar** — talabdagi “faqat tekshiriladigan fayllar `:ro`” qoidasidan uchta asosli istisno. Har biri bo‘sh holda ochiladi, faqat shu tekshiruvga tegishli va ish tugagach o‘chiriladi:
+
+1. Checkov va KICS uchun `out/`: ular natijani faylga yozadi (eksperimentdagi kabi).
+2. Grype uchun `scratch/grype`: Grype obraz qatlamlarini vaqtinchalik katalogga ochadi. Katta obrazlarda bu yuzlab megabayt, `tmpfs` esa konteyner xotirasidan joy oladi.
+3. Baza nusxasi (zaxira rejim): vosita bazani faqat o‘qish rejimida ocha olmasa (`read-only file system` xatosi), baza `scratch/` ga nusxalanadi va bir marta qayta uriniladi. Asl baza baribir o‘zgarmaydi. `BULUTSKAN_TRIVY_DB_MODE=copy` bu rejimni doimiy qiladi.
 
 ### 11.3. Bazalarni yangilash konteyneri
 
 Yagona farqlar: tarmoq yoqilgan (`bridge`), proksi `--env HTTPS_PROXY={docker info qiymati}` sifatida beriladi, baza katalogi yozish uchun ulanadi. `--read-only`, `--cap-drop ALL`, `no-new-privileges` va limitlar saqlanadi. Tekshiriladigan fayllar bu konteynerga ulanmaydi.
+
+Buyruqlar (`run_tests.ps1` va `rerun_trivy.ps1` dan): `trivy image --cache-dir /cache --download-db-only`, `trivy image --cache-dir /cache --download-java-db-only`, `grype db update`. Keyin `grype db status` tarmoqsiz ishga tushiriladi. Sanalar `data/db/holat.json` ga yoziladi: platformaning yangilash vaqti, Trivy `metadata.json` (`UpdatedAt`, `NextUpdate`, `DownloadedAt`), Grype bazasi yig‘ilgan sana va sxemasi. Xato matnida proksi manzili uchrasa, `<proksi>` bilan almashtiriladi.
 
 ### 11.4. Digest yaxlitligi
 
@@ -743,14 +753,20 @@ Cookie: `HttpOnly`, `SameSite=Strict`, imzo kaliti `.env` dagi `BULUTSKAN_SECRET
 | `bulutskan scan --image nginx:1.21 --fail-on critical --fixable-only` | Obraz tekshiruvi |
 | `bulutskan scan --image-tar ./app.tar` | Tayyor `.tar` faylni tekshirish |
 | `bulutskan db-update` | Zaifliklar bazalarini yangilash |
-| `bulutskan tools verify` / `tools pull` | Digestlarni tekshirish / digest bo‘yicha yuklab olish |
+| `bulutskan db-status` | Bazalar sanalari |
+| `bulutskan tools verify` | Digestlarni tekshirish |
+| `bulutskan tools pull` | Trivy, Grype, KICS ni digest bo‘yicha yuklab olish |
+| `bulutskan tools lock-checkov` | Mahalliy Checkov obrazi ID sini qulflash |
+| `bulutskan tools build-checkov` | Checkov’ni `checkov.Dockerfile` dan yig‘ish |
 | `bulutskan demo-import` | Namoyish ma’lumotlarini import qilish (Docker va internetsiz) |
 | `bulutskan user create` | Foydalanuvchi yaratish |
 | `bulutskan serve` | Veb-serverni ishga tushirish (sukut: 127.0.0.1:8000) |
 
-Qo‘shimcha `scan` parametrlari: `--json natija.json`, `--docx hisobot.docx`, `--lang uz|en`.
+Qo‘shimcha `scan` parametrlari: `--image-name` (`--image-tar` uchun obraz nomi, EOL tekshiruviga kerak), `--json natija.json`, `--unknown-severity`. `--docx` 5-bosqichda qo‘shiladi.
 
-`--fail-on` chegarasi: jiddiyligi chegaradan past bo‘lmagan konsensus guruhlari sanaladi. `--fixable-only` faqat `fix_available` holatidagi zaifliklarni sanaydi.
+`--fail-on` chegarasi: jiddiyligi chegaradan past bo‘lmagan **konsensus guruhlari** sanaladi. Bir xatoni uchta vosita topgan bo‘lsa ham, u bir marta sanaladi. `--fixable-only` faqat tuzatilgan versiyasi bor zaifliklarni sanaydi. IaC uchun u e’tiborga olinmaydi va bu haqda eslatma chiqadi.
+
+`--unknown-severity {ignore,low,medium,high}` (sukut: `medium`). Checkov’ning ochiq versiyasi jiddiylik bermaydi. Xatoni faqat Checkov topgan bo‘lsa, guruh darajasi UNKNOWN bo‘ladi va u hech qachon chegaraga yetmasdi. Namoyish fayllarida bunday xato bitta — TF-20 (HTTP listener). Unga 30 ta toifalanmagan Checkov topilmasi ham qo‘shiladi. Bu parametr faqat `--fail-on` qarorida ishlatiladi: ma’lumotda daraja `UNKNOWN` bo‘lib qoladi, hisobotda esa `noma’lum (CI uchun medium deb olindi)` deb yoziladi. JSON eksportda `severity`, `severity_ci` va `severity_label` maydonlari bor.
 
 Chiqish kodlari: `0` — chegaradan oshmadi; `1` — chegaradan oshdi; `2` — foydalanish xatosi, vosita yaxlitligi buzilgan yoki tekshiruv bajarilmadi.
 
@@ -784,9 +800,13 @@ Barcha testlar Docker’siz o‘tadi. Docker chaqiruvlari `subprocess.run` ni al
 | `test_ahp.py` | 3.9-jadval, xos vektor, CR, sezgirlik tahlili | `ahp.json`, `ahp_upd.json` |
 | `test_upload_guard.py` | Zip-slip, zip-bomba, simvolik havola, oq ro‘yxat, hajm, katalog o‘chirilishi | test ichida yaratiladigan arxivlar |
 | `test_validators.py` | Obraz nomi regexi | to‘g‘ri va zararli nomlar |
-| `test_docker_cmd.py` | Majburiy bayroqlar, `shell=False`, maxfiy muhit o‘zgaruvchilari yo‘qligi | fake runner |
-| `test_web.py` | Login, CSRF, ruxsatsiz kirish | FastAPI `TestClient` |
-| `test_cli.py` | Chiqish kodlari 0/1/2 | fake runner + real JSON |
+| `test_docker_cmd.py` | Majburiy bayroqlar, `shell=False`, maxfiy muhit o‘zgaruvchilari yo‘qligi, `--mount` yo‘llari | `subprocess.run` almashtiriladi |
+| `test_tools.py` | `tool_digests.txt`, digest holatlari (mos, mos emas, yo‘q, qulflanmagan), Checkov qulfi | `tests/fakes.py` (soxta docker) |
+| `test_dbupdate.py` | Proksi aniqlash va yashirish, faqat shu bosqichda tarmoq, sanalar | soxta docker, eksperiment metadata fayllari |
+| `test_scanner.py` | Butun quvur: buyruqlar xavfsizligi, natijalar `ch3.json`/`summary.json` bilan, zaxira rejim, xatolar, katalog o‘chirilishi | soxta docker + real JSON |
+| `test_gate.py` | `--fail-on`, `--fixable-only`, `--unknown-severity`, hisobot yozuvi | real JSON |
+| `test_cli.py` | Chiqish kodlari 0/1/2, `--unknown-severity`, JSON eksport, `tools`, `db-update` | soxta docker + real JSON |
+| `test_web.py` | Login, CSRF, ruxsatsiz kirish (4-bosqich) | FastAPI `TestClient` |
 
 ## 16. Texnologiyalar
 
@@ -823,8 +843,8 @@ Barcha testlar Docker’siz o‘tadi. Docker chaqiruvlari `subprocess.run` ni al
 |---|---|
 | 1 | `docs/arxitektura.md`, `.gitignore`, `.env.example` |
 | 2 | Parserlar, yagona model, konsensus, AHP va ularning testlari |
-| 3 | Xavfsiz skaner ishga tushirgich, digest tekshiruvi, bazalarni yangilash, yuklash himoyasi |
-| 4 | Veb-interfeys: kirish, panel, IaC va obraz tekshiruvi, natijalar, AHP, tarix |
+| 3 | Xavfsiz skaner ishga tushirgich, digest tekshiruvi, bazalarni yangilash, yuklash himoyasi, tekshiruv quvuri, CLI (`scan`, `db-update`, `db-status`, `tools`), `--unknown-severity`, Windows sinov ko‘rsatmasi |
+| 4 | SQLite (tarix), veb-interfeys: kirish, panel, IaC va obraz tekshiruvi, natijalar, AHP, tarix |
 | 5 | DOCX hisobot, JSON eksport, CLI, CI namunalari |
 | 6 | O‘zbekcha README, LICENSE (MIT) |
 | 7 | `bulutskan demo-import` |

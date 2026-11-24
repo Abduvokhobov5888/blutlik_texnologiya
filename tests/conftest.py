@@ -93,3 +93,11 @@ def ch3_row(image: str) -> dict[str, Any]:
 
 def summary_row(image: str) -> dict[str, Any]:
     return next(r for r in _summary()["images"] if r["image"] == image)
+
+
+@pytest.fixture
+def settings(tmp_path: Path):
+    """Har bir test uchun alohida ma’lumotlar katalogi (``.env`` o‘qilmaydi)."""
+    from bulutskan.config import Settings
+
+    return Settings(_env_file=None, data_dir=tmp_path / "data")  # type: ignore[call-arg]

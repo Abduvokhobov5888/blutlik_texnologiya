@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bulutskan"
+version = "0.1.0"
+description = "Bulutli infratuzilma kodi va konteyner obrazlarini ochiq kodli skanerlar bilan tekshiruvchi mahalliy platforma"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.2",
+    "bcrypt>=4.1",
+    "typer>=0.12",
+    "python-docx>=1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+bulutskan = "bulutskan.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["bulutskan*"]
+
+[tool.setuptools.package-data]
+bulutskan = [
+    "resources/*",
+    "web/templates/**/*",
+    "web/static/**/*",
+    "web/i18n/*.json",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

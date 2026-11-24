@@ -1,0 +1,16 @@
+# Ishga tushirish uchun kutubxonalar (pyproject.toml bilan bir xil)
+fastapi>=0.115
+uvicorn>=0.30
+sqlalchemy>=2.0
+pydantic>=2.7
+pydantic-settings>=2.3
+jinja2>=3.1
+python-multipart>=0.0.9
+itsdangerous>=2.2
+bcrypt>=4.1
+typer>=0.12
+python-docx>=1.1
+
+# Testlar uchun
+pytest>=8
+httpx>=0.27

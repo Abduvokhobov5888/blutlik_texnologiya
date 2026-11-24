@@ -1,0 +1,51 @@
+# --- Python muhiti ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Maxfiy sozlamalar (faqat .env.example commit qilinadi) ---
+.env
+.env.*
+!.env.example
+secret_key
+
+# --- Ish vaqtida yaratiladigan ma'lumotlar ---
+# Barcha ish ma'lumotlari sukut bo'yicha loyiha ildizidagi data/ katalogida saqlanadi.
+/data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+uploads/
+workdir/
+cache/
+tar/
+*.tar
+*.tar.gz
+*.log
+
+# Hisobotlar (DOCX/JSON eksport) katalogi
+hisobotlar/
+reports/
+
+# Zaifliklar bazalari (Trivy, Trivy Java, Grype)
+trivy-db/
+trivy-java-db/
+grype-db/
+
+# --- Muharrir va OS fayllari ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

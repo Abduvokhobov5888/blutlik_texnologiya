@@ -135,7 +135,7 @@ tests/            pytest (Docker’siz, soxta docker va Windows fayl qoidasi bil
 .venv/bin/python -m mypy bulutskan tests
 ```
 
-Testlar Docker talab qilmaydi. GitHub Actions ularni Ubuntu va Windows’da ishga tushiradi, keyin o‘rnatuvchini yig‘ib, toza Windows’da tekshiradi. `v*` tegi push qilinganda Release avtomatik chiqadi.
+Testlar Docker talab qilmaydi. GitHub Actions ularni Ubuntu va Windows’da ishga tushiradi, keyin o‘rnatuvchini yig‘ib, toza Windows’da tekshiradi. Release ikki yo‘l bilan chiqadi: `v*` tegi push qilinganda yoki **Actions → build → Run workflow** (tarmoq `main`, “Release chiqarish” belgilangan) orqali. Ikkinchi holatda `v{versiya}` tegi o‘sha commit’da yaratiladi.
 
 ## Litsenziya
 

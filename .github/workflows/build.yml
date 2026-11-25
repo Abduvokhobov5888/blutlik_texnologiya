@@ -3,7 +3,8 @@
 # Har push’da: testlar (Ubuntu va Windows), BulutSkan_Setup.exe yig‘iladi va
 # toza Windows’da tekshiriladi: jim o‘rnatish -> ish stolidagi belgi orqali
 # ishga tushirish -> /health 200 -> namoyish, AHP, JSON/DOCX hisobot -> o‘chirish.
-# v* tegi push qilinganda shu o‘rnatuvchi GitHub Release’ga joylanadi.
+# v* tegi push qilinganda (yoki main’da qo‘lda "Release chiqarish" bilan) shu
+# o‘rnatuvchi GitHub Release’ga joylanadi.
 
 name: build
 
@@ -13,10 +14,15 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Release chiqarish: v{versiya} tegi yaratiladi (faqat main tarmog‘ida)"
+        type: boolean
+        default: false
 
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  group: build-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
 
 permissions:
   contents: read
@@ -52,6 +58,8 @@ jobs:
     needs: test
     runs-on: windows-latest
     timeout-minutes: 45
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     defaults:
       run:
         shell: pwsh
@@ -164,10 +172,15 @@ jobs:
   release:
     name: GitHub Release
     needs: installer
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Teg push qilinganda yoki main’da qo‘lda (Actions → build → Run workflow → "Release chiqarish").
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TAG: v${{ needs.installer.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -180,5 +193,6 @@ jobs:
         run: |
           sed -e "s|{{SHA256}}|$(cut -d' ' -f1 dist/SHA256SUMS.txt)|" \
               -e "s|{{REPO_URL}}|${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}|" packaging/release_notes.md > notes.md
-          gh release create "$GITHUB_REF_NAME" dist/BulutSkan_Setup.exe dist/SHA256SUMS.txt \
-            --title "BulutSkan ${GITHUB_REF_NAME#v}" --notes-file notes.md
+          # Teg yo‘q bo‘lsa (qo‘lda ishga tushirish), shu commit’da yaratiladi.
+          gh release create "$TAG" dist/BulutSkan_Setup.exe dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "BulutSkan ${TAG#v}" --notes-file notes.md

@@ -1261,7 +1261,7 @@ flowchart LR
 | Docker yo‘li | `PATH` dan; topilmasa `C:\Program Files\Docker\Docker\resources\bin\docker.exe` (Docker Desktop o‘rnatilgandan keyin kompyuter qayta yuklanmagan bo‘lishi mumkin) |
 | Birinchi ishga tushirish | Brauzer → administrator yaratish (faqat loopback’dan) → kirish → sozlash ustasi. Namoyish ma’lumotlari fonda import qilinadi |
 | Imzo | O‘rnatuvchi imzolanmagan: SmartScreen ogohlantiradi. Yaxlitlik `SHA256SUMS.txt` bilan tekshiriladi (`docs/windows_ornatish.md`) |
-| Tekshiruv | `.github/workflows/build.yml`: testlar (Ubuntu, Windows) → yig‘ish → `/VERYSILENT` o‘rnatish → `user add --password-stdin` → ish stolidagi `.lnk` orqali ishga tushirish → `packaging/smoke_test.py` (`/health`, 16 ta namoyish tekshiruvi, kirish va CSRF, EOL, Jaccard, ground truth, AHP, JSON, DOCX, sarlavhalar) → ikkinchi ishga tushirish → o‘chirish (ma’lumotlar qolishi tekshiriladi) |
+| Tekshiruv | `.github/workflows/build.yml`: testlar (Ubuntu, Windows) → yig‘ish → `/VERYSILENT` o‘rnatish → `user add --password-stdin` → ish stolidagi `.lnk` orqali ishga tushirish → `packaging/smoke_test.py` (`/health`, 16 ta namoyish tekshiruvi, kirish va CSRF, EOL, Jaccard, ground truth, AHP, JSON, DOCX, sarlavhalar) → ikkinchi ishga tushirish → o‘chirish (ma’lumotlar qolishi tekshiriladi). Release: `v*` tegi yoki `main` da qo‘lda ishga tushirish (“Release chiqarish”) |
 
 Actions’dagi Windows runner’da Docker Linux konteynerlari yo‘q. Shuning uchun haqiqiy skanerlash qadamlari faqat foydalanuvchi kompyuterida tekshiriladi (`docs/windows_ornatish.md`, 8-bo‘lim).
 

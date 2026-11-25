@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bulutskan"
-version = "0.1.0"
+version = "1.0.0"
 description = "Bulutli infratuzilma kodi va konteyner obrazlarini ochiq kodli skanerlar bilan tekshiruvchi mahalliy platforma"
 readme = "README.md"
 license = "MIT"

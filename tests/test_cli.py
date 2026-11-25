@@ -227,3 +227,16 @@ def test_complete_scan_has_no_failures_in_json(fake: FakeDocker, tmp_path: Path)
     assert res.exit_code == 0
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["failures"] == [] and data["exit"]["code"] == 0 and data["exit"]["partial"] is False
+
+
+def test_version_is_consistent() -> None:
+    """Release tegi (v1.0.0) ``__version__`` bilan solishtiriladi; pyproject ham mos bo‘lsin."""
+    import tomllib
+
+    from bulutskan import __version__
+
+    root = Path(__file__).resolve().parent.parent
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    assert project["version"] == __version__
+    res = _run("--version")
+    assert res.exit_code == 0 and __version__ in res.output

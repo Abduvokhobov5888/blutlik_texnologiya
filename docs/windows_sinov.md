@@ -141,7 +141,7 @@ Tekshirish:
 bulutskan --version
 ```
 
-Kutilgan natija: `BulutSkan 0.1.0`.
+Kutilgan natija: `BulutSkan 1.0.0`.
 
 O‘zbekcha harflar (`‘`, `’`, `—`) to‘g‘ri chiqishi uchun konsolni UTF-8 ga o‘tkazing:
 

@@ -106,7 +106,7 @@ pip install -e ".[dev]"
 python -m pytest -q
 ```
 
-Testlar soni men xabarimda yozgan qiymatga teng bo‘lishi kerak (shu versiyada `396 passed`). Keyin `bulutskan tools verify` barcha vositalarni `ok` deb ko‘rsatishi kerak: Checkov qulfi saqlanib qolgan.
+Testlar soni men xabarimda yozgan qiymatga teng bo‘lishi kerak (shu versiyada `453 passed`). Keyin `bulutskan tools verify` barcha vositalarni `ok` deb ko‘rsatishi kerak: Checkov qulfi saqlanib qolgan.
 
 ## 3. Python muhiti
 
@@ -159,7 +159,7 @@ Busiz Windows PowerShell 5.1 da `bo‘yicha` o‘rniga `boСyicha`, `—` o‘rn
 python -m pytest -q
 ```
 
-Kutilgan natija: `396 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
+Kutilgan natija: `453 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
 
 ## 5. Vositalar yaxlitligi
 

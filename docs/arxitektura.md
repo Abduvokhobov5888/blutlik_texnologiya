@@ -1150,7 +1150,7 @@ Qadamlar tartib bilan bajariladi: keyingi qadam faqat oldingisi yashil bo‘lgan
 
 Talabda yashil va qizil holat so‘ralgan. Ularga uchinchisi qo‘shildi: **sariq** — “ishlaydi, lekin e’tibor bering”. Masalan, baza eskirgan yoki Docker’ga 4 GB dan kam xotira ajratilgan. Holat faqat rang bilan emas, belgi (✓, ✗, !) va matn bilan ham ko‘rsatiladi: rangni ajrata olmaydigan foydalanuvchi ham tushunadi.
 
-Barcha qadamlar yashil bo‘lsa, usta sozlash tugaganini (`SETTING.setup_completed_at`) yozadi va boshqaruv paneliga o‘tadi. Usta keyinroq “Vositalar va bazalar” sahifasidan qayta ochiladi. Bu sahifa platforma sozlanmagan bo‘lsa, kirishdan keyin avtomatik ochiladi.
+Barcha qadamlar yashil bo‘lsa, usta sozlash tugaganini (`SETTING.setup_completed_at`) yozadi va boshqaruv paneliga o‘tadi. Usta keyinroq “Vositalar va bazalar” sahifasidan qayta ochiladi. Lokal rejimda vositalar hali bir marta ham tekshirilmagan bo‘lsa (`SETTING.setup_state` yo‘q), administrator kirgandan keyin shu sahifa avtomatik ochiladi.
 
 ### 18.2. Docker bo‘lmasa
 
@@ -1173,6 +1173,8 @@ Uzoq amallarni (yuklab olish, yig‘ish, bazalar) veb jarayoni emas, `worker` ba
 | Oflayn to‘plam | Fayllar bo‘yicha va baytlar bo‘yicha |
 
 Vosita foizni bermaydigan joyda platforma uni to‘qib chiqarmaydi: aniq foiz o‘rniga harakatlanuvchi ko‘rsatkich va o‘tgan vaqt chiqadi.
+
+**1.0 versiyada amalga oshirilgani.** Foiz qatlamlar bo‘yicha emas, amal ichidagi qadamlar bo‘yicha hisoblanadi: obrazlar — vosita bo‘yicha (1/3, 2/3, 3/3), bazalar — baza bo‘yicha (1/3, 2/3, 3/3). Checkov’ni yig‘ishda foiz yo‘q, shuning uchun harakatlanuvchi ko‘rsatkich chiqadi. Yig‘ish tugagach, qulflash bosqichida ko‘rsatkich 80% ni ko‘rsatadi. `docker pull` va `docker build` chiqishidan qatlam bo‘yicha foiz olish keyingi versiyaga qoldirildi.
 
 Bazalar sanasi ham tekshiriladi. Grype 5 kundan (120 soat) eski bazani qabul qilmaydi, shuning uchun 4 kundan eski baza sariq bo‘ladi. 5 kundan eskisi qizil: “Grype bazasi 6 kun oldin yig‘ilgan va tekshiruvda ishlamaydi. Yangilang”.
 
@@ -1233,6 +1235,36 @@ Soxta docker (`tests/fakes.py`) bilan tekshiriladi:
 - to‘plamni eksport va import qilish; buzilgan fayl (SHA-256), boshqa obraz ID si, xavfli yo‘lli arxiv va tekshiruv ishlayotgan paytdagi import rad etilishi;
 - barcha testlar Windows fayl qoidasi (`tests/winfs.py`) bilan.
 
+### 18.6. Windows o‘rnatuvchisi
+
+Docker Desktop o‘rnatilgan Windows kompyuterda platforma Python va git’siz ishlashi kerak. Buning uchun GitHub Releases’da `BulutSkan_Setup.exe` tarqatiladi.
+
+```mermaid
+flowchart LR
+    SRC[Manba kod] --> PI["PyInstaller<br/>packaging/bulutskan.spec"]
+    PI --> DIR["dist/BulutSkan/<br/>BulutSkan.exe + _internal/"]
+    DIR --> ISS["Inno Setup<br/>packaging/bulutskan.iss"]
+    ISS --> EXE[BulutSkan_Setup.exe]
+    EXE --> T["Actions: jim o‘rnatish →<br/>belgi orqali ishga tushirish →<br/>smoke test → o‘chirish"]
+    T -->|v* tegi| REL[GitHub Release]
+```
+
+| Qism | Qaror |
+|---|---|
+| Yig‘ish | PyInstaller, `onedir` rejimi (`onefile` har ishga tushishda arxivni vaqtinchalik papkaga ochadi, bu sekin va antiviruslar uchun shubhali). Ichida: Python, kutubxonalar, shablonlar, statik fayllar, `resources/`, III bob hisobotlari (`demo/sinov/natijalar`) |
+| Kirish nuqtasi | `bulutskan/launcher.py`: argumentsiz ishga tushirilsa — `serve`, argument bilan — oddiy CLI (`BulutSkan.exe scan …`) |
+| Oyna | Konsol oynasi: unda manzil va jurnal ko‘rinadi; oynani yopish dasturni to‘xtatadi |
+| O‘rnatish joyi | `%LOCALAPPDATA%\Programs\BulutSkan`, administrator huquqisiz (`PrivilegesRequired=lowest`) |
+| Ma’lumotlar | `%LOCALAPPDATA%\BulutSkan\data` (`config.default_data_dir`). Dastur papkasidan alohida, shuning uchun yangilash va o‘chirish ularga tegmaydi |
+| Sozlamalar | Ixtiyoriy `%LOCALAPPDATA%\BulutSkan\bulutskan.env` |
+| Bitta nusxa | `data/instance.json` da port saqlanadi. Belgi ikkinchi marta bosilsa, `/health` dagi `instance` (ma’lumotlar katalogi xeshi) solishtiriladi va ishlab turgan nusxa brauzerda ochiladi. Ikkinchi server va ikkinchi worker ishga tushmaydi |
+| Docker yo‘li | `PATH` dan; topilmasa `C:\Program Files\Docker\Docker\resources\bin\docker.exe` (Docker Desktop o‘rnatilgandan keyin kompyuter qayta yuklanmagan bo‘lishi mumkin) |
+| Birinchi ishga tushirish | Brauzer → administrator yaratish (faqat loopback’dan) → kirish → sozlash ustasi. Namoyish ma’lumotlari fonda import qilinadi |
+| Imzo | O‘rnatuvchi imzolanmagan: SmartScreen ogohlantiradi. Yaxlitlik `SHA256SUMS.txt` bilan tekshiriladi (`docs/windows_ornatish.md`) |
+| Tekshiruv | `.github/workflows/build.yml`: testlar (Ubuntu, Windows) → yig‘ish → `/VERYSILENT` o‘rnatish → `user add --password-stdin` → ish stolidagi `.lnk` orqali ishga tushirish → `packaging/smoke_test.py` (`/health`, 16 ta namoyish tekshiruvi, kirish va CSRF, EOL, Jaccard, ground truth, AHP, JSON, DOCX, sarlavhalar) → ikkinchi ishga tushirish → o‘chirish (ma’lumotlar qolishi tekshiriladi) |
+
+Actions’dagi Windows runner’da Docker Linux konteynerlari yo‘q. Shuning uchun haqiqiy skanerlash qadamlari faqat foydalanuvchi kompyuterida tekshiriladi (`docs/windows_ornatish.md`, 8-bo‘lim).
+
 ## 19. Qabul qilingan qarorlar
 
 | № | Masala | Qaror |
@@ -1251,8 +1283,13 @@ Soxta docker (`tests/fakes.py`) bilan tekshiriladi:
 | 12 | Birinchi sozlash ustasi | To‘rt qadam: Docker → vositalar → Checkov → bazalar. Uzoq amallarni worker bajaradi, holatlar yashil, sariq va qizil (18-bo‘lim, foydalanuvchi so‘ragan) |
 | 13 | Oflayn to‘plam | SHA-256 va repozitoriyda qotirilgan obraz ID lari bilan tekshiriladi, foydalanuvchi ma’lumotlari kirmaydi (18.4-bo‘lim) |
 | 14 | Qisman tekshiruv | CI rejimida chiqish kodi 2, istisno `--allow-partial`; sabab hisobotda va JSON’da (foydalanuvchi tasdiqlagan) |
+| 15 | Tarqatish | Windows o‘rnatuvchisi (PyInstaller + Inno Setup), GitHub Actions’da yig‘iladi va tekshiriladi, `v*` tegida Release (18.6-bo‘lim, foydalanuvchi so‘ragan) |
+| 16 | CLI hisobot | `--docx` tarixga yozmaydi (vaqtinchalik baza), `--save` natijani tarixga `cli` manbasi bilan yozadi |
+| 17 | Shablonlarga ma’lumot | Diagramma ma’lumotlari `data-json` atributida: HTMX almashtirilgan qismdagi barcha `<script>` teglarini o‘chiradi, CSP esa inline skriptga ruxsat bermaydi |
 
 ## 20. Bosqichlar
+
+1–7-bosqichlar va 8-bosqichdagi sozlash ustasining veb qismi bajarilgan. Windows o‘rnatuvchisi (9) 1.0 versiyada chiqdi. Serverga joylashtirish (8) va oflayn to‘plam hali qilinmagan.
 
 | Bosqich | Natija |
 |---|---|
@@ -1264,3 +1301,4 @@ Soxta docker (`tests/fakes.py`) bilan tekshiriladi:
 | 6 | O‘zbekcha README, LICENSE (MIT) |
 | 7 | `bulutskan demo-import`. Mehmon roli va panel unga tayanadi, shuning uchun 4-bosqich bilan birga yoziladi |
 | 8 | Serverga joylashtirish: `deploy/Dockerfile`, `deploy/Caddyfile`, `docker-compose.yml`, server `.env.example`, `docs/serverga_joylash.md` (Ubuntu 24.04, UFW, SSH kalit, yangilash, zaxira nusxa). Birinchi sozlash ustasi (veb va `bulutskan setup`), `docs/docker_ornatish.md`. Ixtiyoriy: oflayn to‘plam (`bundle export/import`) |
+| 9 | Windows o‘rnatuvchisi: `packaging/` (PyInstaller, Inno Setup, smoke test), `.github/workflows/build.yml`, `docs/windows_ornatish.md`, GitHub Release (18.6-bo‘lim) |

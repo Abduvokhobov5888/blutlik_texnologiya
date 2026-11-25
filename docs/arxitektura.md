@@ -1,7 +1,7 @@
 # BulutSkan arxitekturasi
 
-> **Holat:** 3-bosqich bajarildi: xavfsiz skaner moduli, digest tekshiruvi, bazalarni yangilash, fayl yuklash himoyasi, tekshiruv quvuri va CLI ning asosiy buyruqlari. Haqiqiy Docker bilan sinov ko‘rsatmasi: [windows_sinov.md](windows_sinov.md).
-> **Reja o‘zgarishi:** lokal rejimdan tashqari server rejimi qo‘shildi: internetdagi VPS, HTTPS, rollar, kvotalar, alohida `worker` (17-bo‘lim). Veb qismi 4-bosqichda ikkala rejimni hisobga olib quriladi, serverga joylashtirish alohida 8-bosqich.
+> **Holat (1.0):** platforma Windows o‘rnatuvchisi (`BulutSkan_Setup.exe`) sifatida tarqatiladi va lokal rejimda ishlaydi (18.6-bo‘lim). O‘rnatish va haqiqiy sinov: [windows_ornatish.md](windows_ornatish.md); manba koddan ishlash: [windows_sinov.md](windows_sinov.md).
+> **Kelajakdagi ish:** server rejimini joylashtirish (`docker-compose`, Caddy, VPS), oflayn to‘plam va `bulutskan setup` buyrug‘i hozircha qilinmaydi: .exe varianti tanlangan. Bu qismlar hujjatda reja sifatida qoldirilgan va “kelajakdagi ish” deb belgilangan (21-bo‘lim).
 > 1-bosqichda ⚠ bilan belgilangan joylar `Sinov` materiallari (`analyze.py`, `stats3.py`, `ground_truth.csv`, `run_tests.ps1`, `tool_digests.txt`, `ahp/`) asosida aniqlashtirildi.
 
 BulutSkan — bulutli infratuzilma kodini (IaC) va konteyner obrazlarini bir nechta ochiq kodli skaner bilan tekshiradigan mahalliy veb-platforma. U Andijon davlat universiteti magistranti Odilova Robiyaxonning “Bulutli hisoblash texnologiyalari xavfsizligini ta’minlovchi dasturiy vositalarni qiyosiy tahlil qilish va ochiq kodli vositalar samaradorligini baholash” mavzusidagi dissertatsiyasining amaliy natijasidir.
@@ -14,7 +14,7 @@ Platformaning har bir qismi dissertatsiya xulosalaridan kelib chiqadigan beshta 
 2. **Skaner — ishonchsiz kod.** Har bir vosita alohida, tarmoqsiz, imtiyozsiz va resurslari cheklangan konteynerda ishlaydi.
 3. **Ta’minot zanjiri qotiriladi.** Vositalar teg orqali emas, faqat sha256 digest orqali chaqiriladi. Digest mos kelmasa, tekshiruv boshlanmaydi.
 4. **Internet faqat bitta bosqichda kerak.** Zaifliklar bazalari alohida “bazalarni yangilash” amali bilan yuklanadi. Tekshiruvning o‘zi internetsiz bajariladi.
-5. **Ma’lumotlar mahalliy qoladi.** Telemetriya, tashqi CDN va tashqi API yo‘q. Lokal rejimda ilova faqat `127.0.0.1` manzilida tinglaydi. Server rejimida u O‘zbekistondagi VPS’da faqat HTTPS orqali (Caddy) ochiq bo‘ladi, foydalanuvchi ma’lumotlari serverdan chiqmaydi (17-bo‘lim).
+5. **Ma’lumotlar mahalliy qoladi.** Telemetriya, tashqi CDN va tashqi API yo‘q. Lokal rejimda ilova faqat `127.0.0.1` manzilida tinglaydi. Server rejimida (kelajakdagi ish, 17-bo‘lim) u O‘zbekistondagi VPS’da faqat HTTPS orqali (Caddy) ochiq bo‘ladi, foydalanuvchi ma’lumotlari serverdan chiqmaydi.
 
 ## 2. Umumiy ko‘rinish
 
@@ -143,7 +143,7 @@ BulutSkan/
 │   │   ├── compare.py           # ikki tekshiruvni solishtirish
 │   │   ├── demo.py              # demo-import
 │   │   ├── setup.py             # birinchi sozlash ustasining qadamlari va jarayon ko‘rsatkichi (8-bosqich)
-│   │   └── bundle.py            # oflayn to‘plam: eksport va import (8-bosqich)
+│   │   └── bundle.py            # oflayn to‘plam: eksport va import (kelajakdagi ish)
 │   ├── reporting/
 │   │   ├── docx_report.py
 │   │   └── json_export.py
@@ -154,7 +154,7 @@ BulutSkan/
 │   │   ├── ahp.json             # Sinov\ahp: matritsa A, xos vektor w
 │   │   ├── ahp_upd.json         # Sinov\ahp: ballar S2, sezgirlik natijalari
 │   │   ├── iac/                 # Sinov\iac: insecure va secure test fayllari
-│   │   ├── tool_image_ids.txt   # vositalar obraz ID lari: oflayn to‘plamni tekshirish uchun (8-bosqich)
+│   │   ├── tool_image_ids.txt   # vositalar obraz ID lari: oflayn to‘plamni tekshirish uchun (kelajakdagi ish)
 │   │   └── eol.json             # ichki EOL ro‘yxati
 │   └── web/
 │       ├── app.py               # FastAPI fabrikasi, middleware’lar
@@ -824,10 +824,10 @@ Menyu foydalanuvchi roliga qarab chiqadi (17.4-bo‘lim). Administrator uchun qo
 | `bulutskan user list` / `user disable` / `user passwd` | Akkauntlarni ko‘rish, o‘chirish, parolni almashtirish |
 | `bulutskan serve` | Veb-server. Lokal rejimda: 127.0.0.1:8000, worker ichida. Server rejimida: faqat veb, Docker’siz |
 | `bulutskan worker` | Server rejimi: navbatdan tekshiruvlarni olib bajaruvchi jarayon (2 slot), kunlik tozalash va baza yangilash |
-| `bulutskan setup` | Birinchi sozlash ustasining matnli varianti (18-bo‘lim, 8-bosqich) |
-| `bulutskan bundle export FAYL` / `bundle import FAYL` | Oflayn to‘plam: vosita obrazlari va bazalar bitta arxivda (ixtiyoriy, 8-bosqich) |
+| `bulutskan setup` | **Kelajakdagi ish.** Birinchi sozlash ustasining matnli varianti (18-bo‘lim) |
+| `bulutskan bundle export FAYL` / `bundle import FAYL` | **Kelajakdagi ish.** Oflayn to‘plam: vosita obrazlari va bazalar bitta arxivda (18.4-bo‘lim) |
 
-Qo‘shimcha `scan` parametrlari: `--image-name` (`--image-tar` uchun obraz nomi, EOL tekshiruviga kerak), `--json natija.json`, `--unknown-severity`. `--docx` 5-bosqichda qo‘shiladi.
+Qo‘shimcha `scan` parametrlari: `--image-name` (`--image-tar` uchun obraz nomi, EOL tekshiruviga kerak), `--json natija.json`, `--unknown-severity`. `--docx` (DOCX hisobot) va `--save` (tarixga yozish) 5-bosqichda qo‘shildi.
 
 `--fail-on` chegarasi: jiddiyligi chegaradan past bo‘lmagan **konsensus guruhlari** sanaladi. Bir xatoni uchta vosita topgan bo‘lsa ham, u bir marta sanaladi. `--fixable-only` faqat tuzatilgan versiyasi bor zaifliklarni sanaydi. IaC uchun u e’tiborga olinmaydi va bu haqda eslatma chiqadi.
 
@@ -902,6 +902,8 @@ Platforma Windows’da ishlatiladi, bulutli testlar esa Linux’da o‘tadi. Lin
 | Server rejimi | Ubuntu 24.04, Docker Engine va Compose, Caddy 2 (teskari proksi, Let’s Encrypt, digest bilan qotirilgan), UFW |
 
 ## 17. Ish rejimlari: lokal va server
+
+> **Kelajakdagi ish.** 1.0 versiyada faqat lokal rejim tanlangan: Windows o‘rnatuvchisi (18.6-bo‘lim). Kodda server rejimining bir qismi bor va testlanadi: `BULUTSKAN_MODE=server`, rollar, kvotalar, HSTS, `Secure` cookie, ruxsat etilgan registrlar, alohida `bulutskan worker` buyrug‘i. Lekin joylashtirish fayllari (`deploy/`, `docker-compose.yml`, Caddy) va `docs/serverga_joylash.md` yozilmagan, 17.10-bo‘limdagi savollar ochiq qoldirilgan. Quyidagi matn reja sifatida saqlanadi.
 
 Platforma bitta kod bazasidan ikki rejimda ishlaydi. Rejim `BULUTSKAN_MODE` sozlamasi bilan tanlanadi (`local` yoki `server`). Lokal rejim — dastlabki talab: Windows kompyuter, bitta foydalanuvchi, `127.0.0.1`. U o‘zgarishsiz qoladi. Server rejimi magistrlik himoyasi uchun qo‘shildi: komissiya platformani havola orqali ochadi.
 
@@ -1082,7 +1084,7 @@ Amallar:
 
 Administrator jurnalni `/admin/audit` sahifasida filtrlar bilan ko‘radi va CSV ga eksport qiladi. Bundan tashqari `web` va `worker` JSON qatorlarini stdout ga yozadi (`docker compose logs`). Docker’ning `json-file` drayveri ularni hajm bo‘yicha aylantiradi. Parollar, tokenlar, proksi manzili va yuklangan fayllar mazmuni jurnalga yozilmaydi.
 
-### 17.9. Serverga joylashtirish (8-bosqich)
+### 17.9. Serverga joylashtirish (kelajakdagi ish)
 
 Repozitoriyga qo‘shiladigan fayllar:
 
@@ -1107,7 +1109,9 @@ Repozitoriyga qo‘shiladigan fayllar:
 
 **Maxfiy qiymatlar.** `BULUTSKAN_SECRET_KEY` va `BULUTSKAN_ADMIN_PASSWORD` faqat serverdagi `/srv/bulutskan/.env` da saqlanadi (`chmod 600`). `.env` `.gitignore` da. `.env.example` da faqat namuna turadi, server rejimi esa namuna qiymat bilan ishga tushmaydi. Kalit yaratish: `openssl rand -base64 48`.
 
-### 17.10. Ochiq savollar
+### 17.10. Ochiq savollar (kelajakdagi ish)
+
+Server rejimi qoldirilgani uchun bu savollar hozir hal qilinmaydi. Ular serverga joylashtirish boshlanganda qayta ko‘riladi.
 
 | № | Savol | Tavsiyam |
 |---|---|---|
@@ -1118,7 +1122,7 @@ Repozitoriyga qo‘shiladigan fayllar:
 
 ## 18. Birinchi sozlash ustasi va oflayn to‘plam
 
-Platformani birinchi marta ochgan foydalanuvchi Docker, vosita obrazlari va bazalarni qo‘lda tekshirmasligi kerak. Buni “Birinchi sozlash” ustasi bajaradi. U ikkala rejimda ishlaydi: lokal rejimda — Docker Desktop, server rejimida — Docker Engine (faqat administrator uchun). Usta 8-bosqichda yoziladi va 4-bosqichdagi veb-interfeysga tayanadi.
+Platformani birinchi marta ochgan foydalanuvchi Docker, vosita obrazlari va bazalarni qo‘lda tekshirmasligi kerak. Buni “Birinchi sozlash” ustasi bajaradi. U ikkala rejimda ishlaydi: lokal rejimda — Docker Desktop, server rejimida — Docker Engine (faqat administrator uchun). Ustaning veb qismi 1.0 versiyada bor. Oflayn to‘plam (18.4) va `bulutskan setup` buyrug‘i — kelajakdagi ish (21-bo‘lim).
 
 ### 18.1. Qadamlar
 
@@ -1187,9 +1191,9 @@ Bazalar sanasi ham tekshiriladi. Grype 5 kundan (120 soat) eski bazani qabul qil
 - Checkov faqat platforma ichidagi `checkov.Dockerfile` dan, qat’iy argumentlar bilan yig‘iladi. Foydalanuvchi kiritgan qiymat buyruqqa tushmaydi.
 - Checkov’ning yangi yig‘ishlarida bazaviy obraz ham digest bilan qotiriladi: `python:3.12-slim@sha256:191083cd…`, `image_digests.txt` dan olinadi. Mavjud `diss-checkov:3.3.26` obrazi o‘zgarmaydi.
 
-CLI’da xuddi shu qadamlar `bulutskan setup` buyrug‘i bilan matnli ko‘rinishda bajariladi. U serverda SSH orqali va grafik interfeyssiz kompyuterlarda kerak bo‘ladi.
+**Kelajakdagi ish.** CLI’da xuddi shu qadamlar `bulutskan setup` buyrug‘i bilan matnli ko‘rinishda bajariladi. U serverda SSH orqali va grafik interfeyssiz kompyuterlarda kerak bo‘ladi.
 
-### 18.4. Oflayn to‘plam (ixtiyoriy)
+### 18.4. Oflayn to‘plam (kelajakdagi ish)
 
 Internetsiz kompyuterda vosita obrazlari va bazalarni yuklab bo‘lmaydi. Oflayn to‘plam ularni internetli kompyuterdan bitta arxivda olib o‘tadi.
 
@@ -1231,8 +1235,8 @@ Ikkala holatda ham ID obraz mazmunidan hisoblanadi va qalbakilashtirib bo‘lmay
 Soxta docker (`tests/fakes.py`) bilan tekshiriladi:
 - har bir qadamning har bir holati: Docker CLI yo‘q, server o‘chiq, ishlayapti; obraz yo‘q va yuklab olinganidan keyin yashil; teg boshqa obrazga ko‘rsatgan holat; Checkov yo‘q → yig‘ish → qulflash; baza yo‘q, eski, yangi;
 - Docker bo‘lmaganda namoyish rejimiga o‘tish;
-- `docker pull` va `docker build` chiqishidan foiz hisoblash (yozib olingan namunalar asosida);
-- to‘plamni eksport va import qilish; buzilgan fayl (SHA-256), boshqa obraz ID si, xavfli yo‘lli arxiv va tekshiruv ishlayotgan paytdagi import rad etilishi;
+- kelajakdagi ish: `docker pull` va `docker build` chiqishidan foiz hisoblash (yozib olingan namunalar asosida);
+- kelajakdagi ish: to‘plamni eksport va import qilish; buzilgan fayl (SHA-256), boshqa obraz ID si, xavfli yo‘lli arxiv va tekshiruv ishlayotgan paytdagi import rad etilishi;
 - barcha testlar Windows fayl qoidasi (`tests/winfs.py`) bilan.
 
 ### 18.6. Windows o‘rnatuvchisi
@@ -1278,10 +1282,10 @@ Actions’dagi Windows runner’da Docker Linux konteynerlari yo‘q. Shuning uc
 | 7 | Digest mos kelmaganda | Tekshiruvlar bloklanadi, tarix, demo va AHP ishlaydi (foydalanuvchi tasdiqlagan) |
 | 8 | KICS uchun yozish katalogi | Bo‘sh, alohida `out/` katalogi |
 | 9 | `--unknown-severity` | Sukut `medium`, faqat `--fail-on` qarorida (foydalanuvchi so‘ragan) |
-| 10 | Server rejimi | Lokal rejim saqlanadi. Server: Caddy + `web` + `worker`, rollar, kvotalar, audit, 30 kunlik saqlash (17-bo‘lim, foydalanuvchi so‘ragan) |
+| 10 | Server rejimi | Lokal rejim saqlanadi. Server: Caddy + `web` + `worker`, rollar, kvotalar, audit, 30 kunlik saqlash (17-bo‘lim, foydalanuvchi so‘ragan). Keyinroq .exe varianti tanlandi: server rejimini joylashtirish — kelajakdagi ish (21-bo‘lim) |
 | 11 | Navbat | SQLite (`SCAN` jadvali), Redis emas (17.3-bo‘lim) |
 | 12 | Birinchi sozlash ustasi | To‘rt qadam: Docker → vositalar → Checkov → bazalar. Uzoq amallarni worker bajaradi, holatlar yashil, sariq va qizil (18-bo‘lim, foydalanuvchi so‘ragan) |
-| 13 | Oflayn to‘plam | SHA-256 va repozitoriyda qotirilgan obraz ID lari bilan tekshiriladi, foydalanuvchi ma’lumotlari kirmaydi (18.4-bo‘lim) |
+| 13 | Oflayn to‘plam | SHA-256 va repozitoriyda qotirilgan obraz ID lari bilan tekshiriladi, foydalanuvchi ma’lumotlari kirmaydi (18.4-bo‘lim). Kelajakdagi ish (21-bo‘lim) |
 | 14 | Qisman tekshiruv | CI rejimida chiqish kodi 2, istisno `--allow-partial`; sabab hisobotda va JSON’da (foydalanuvchi tasdiqlagan) |
 | 15 | Tarqatish | Windows o‘rnatuvchisi (PyInstaller + Inno Setup), GitHub Actions’da yig‘iladi va tekshiriladi, `v*` tegida Release (18.6-bo‘lim, foydalanuvchi so‘ragan) |
 | 16 | CLI hisobot | `--docx` tarixga yozmaydi (vaqtinchalik baza), `--save` natijani tarixga `cli` manbasi bilan yozadi |
@@ -1289,7 +1293,7 @@ Actions’dagi Windows runner’da Docker Linux konteynerlari yo‘q. Shuning uc
 
 ## 20. Bosqichlar
 
-1–7-bosqichlar va 8-bosqichdagi sozlash ustasining veb qismi bajarilgan. Windows o‘rnatuvchisi (9) 1.0 versiyada chiqdi. Serverga joylashtirish (8) va oflayn to‘plam hali qilinmagan.
+1–7-bosqichlar, 8-bosqichdagi sozlash ustasining veb qismi va Windows o‘rnatuvchisi (9) 1.0 versiyada bajarilgan. 8-bosqichning qolgan qismi — kelajakdagi ish (21-bo‘lim).
 
 | Bosqich | Natija |
 |---|---|
@@ -1300,5 +1304,18 @@ Actions’dagi Windows runner’da Docker Linux konteynerlari yo‘q. Shuning uc
 | 5 | DOCX hisobot, JSON eksport, CLI, CI namunalari |
 | 6 | O‘zbekcha README, LICENSE (MIT) |
 | 7 | `bulutskan demo-import`. Mehmon roli va panel unga tayanadi, shuning uchun 4-bosqich bilan birga yoziladi |
-| 8 | Serverga joylashtirish: `deploy/Dockerfile`, `deploy/Caddyfile`, `docker-compose.yml`, server `.env.example`, `docs/serverga_joylash.md` (Ubuntu 24.04, UFW, SSH kalit, yangilash, zaxira nusxa). Birinchi sozlash ustasi (veb va `bulutskan setup`), `docs/docker_ornatish.md`. Ixtiyoriy: oflayn to‘plam (`bundle export/import`) |
+| 8 | **Kelajakdagi ish** (sozlash ustasining veb qismidan tashqari). Serverga joylashtirish: `deploy/Dockerfile`, `deploy/Caddyfile`, `docker-compose.yml`, server `.env.example`, `docs/serverga_joylash.md` (Ubuntu 24.04, UFW, SSH kalit, yangilash, zaxira nusxa). Birinchi sozlash ustasi (veb va `bulutskan setup`), `docs/docker_ornatish.md`. Ixtiyoriy: oflayn to‘plam (`bundle export/import`) |
 | 9 | Windows o‘rnatuvchisi: `packaging/` (PyInstaller, Inno Setup, smoke test), `.github/workflows/build.yml`, `docs/windows_ornatish.md`, GitHub Release (18.6-bo‘lim) |
+
+## 21. Kelajakdagi ish
+
+1.0 versiyada platforma Windows o‘rnatuvchisi sifatida, lokal rejimda tarqatiladi. Quyidagilar hujjatda reja sifatida saqlanadi, lekin hozir qilinmaydi.
+
+| Ish | Hujjatdagi rejasi | Holat |
+|---|---|---|
+| Server rejimini joylashtirish: `deploy/Dockerfile`, `deploy/Caddyfile`, `docker-compose.yml`, server `.env.example`, `docs/serverga_joylash.md` | 17.2, 17.3, 17.9 | Qilinmagan. Kodning server rejimiga oid qismlari (rollar, kvotalar, HSTS, `worker`) testlar bilan saqlanadi |
+| Server rejimi bo‘yicha ochiq savollar: `worker` ning Docker’ga kirishi, mehmon qoidasi, 30 kunlik saqlashda nima o‘chishi, VPS diski | 17.10 | Ochiq |
+| Oflayn to‘plam: `bulutskan bundle export/import`, `tool_image_ids.txt` | 18.4 | Qilinmagan |
+| `bulutskan setup`: sozlash ustasining matnli varianti | 13, 18.3 | Qilinmagan; usta veb-interfeysda bor |
+| Ustada qatlam bo‘yicha foiz (`docker pull` va `docker build` chiqishidan) | 18.3 | Hozir foiz amal ichidagi qadamlar bo‘yicha |
+| `docs/docker_ornatish.md` | 18.2 | Ko‘rsatma ilova ichida (`/help/docker`) va `docs/windows_ornatish.md` da bor; alohida fayl yozilmagan |

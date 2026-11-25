@@ -789,6 +789,8 @@ JSON eksport: `schema_version`, tekshiruv ma’lumotlari, vositalar (versiya, di
 
 Barcha testlar Docker’siz o‘tadi. Docker chaqiruvlari `subprocess.run` ni almashtiradigan soxta ishga tushirgich (fake runner) bilan tekshiriladi.
 
+Platforma Windows’da ishlatiladi, bulutli testlar esa Linux’da o‘tadi. Linux ochiq faylni o‘chirishga ruxsat beradi, Windows esa yo‘q (`PermissionError: [WinError 32]`). Shu farq tufayli bitta xato faqat Windows’dagi sinovda chiqqan edi. Endi `tests/winfs.py` barcha testlarda Windows qoidasini taqlid qiladi: test katalogidagi ochiq fayl ustida `unlink`, `remove`, `rmdir`, `rename` va `replace` xato beradi.
+
 | Test fayli | Nimani tekshiradi | Ma’lumot |
 |---|---|---|
 | `test_parsers.py` | To‘rt vosita parserlari: yozuvlar soni, darajalar, tuzatiladiganlar `summary.json` bilan | `demo/sinov/natijalar` dagi real JSON |
@@ -806,6 +808,7 @@ Barcha testlar Docker’siz o‘tadi. Docker chaqiruvlari `subprocess.run` ni al
 | `test_scanner.py` | Butun quvur: buyruqlar xavfsizligi, natijalar `ch3.json`/`summary.json` bilan, zaxira rejim, xatolar, katalog o‘chirilishi | soxta docker + real JSON |
 | `test_gate.py` | `--fail-on`, `--fixable-only`, `--unknown-severity`, hisobot yozuvi | real JSON |
 | `test_cli.py` | Chiqish kodlari 0/1/2, `--unknown-severity`, JSON eksport, `tools`, `db-update` | soxta docker + real JSON |
+| `test_windows_files.py` | Windows fayl qoidasi: ochiq faylni o‘chirish/ko‘chirish (WinError 32), qisman yozilgan fayllarni bekor qilish, katalogni qayta urinib o‘chirish | `tests/winfs.py` |
 | `test_web.py` | Login, CSRF, ruxsatsiz kirish (4-bosqich) | FastAPI `TestClient` |
 
 ## 16. Texnologiyalar

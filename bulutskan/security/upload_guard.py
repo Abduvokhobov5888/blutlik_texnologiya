@@ -18,6 +18,7 @@ from __future__ import annotations
 import stat
 import tarfile
 import zipfile
+import zlib
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -124,14 +125,58 @@ def _looks_binary(head: bytes) -> bool:
     return b"\x00" in head
 
 
+def _read_head(path: Path, size: int = 8192) -> bytes:
+    """Fayl boshini o‘qiydi va faylni darhol yopadi.
+
+    Windows ochiq faylni o‘chirishga ruxsat bermaydi (WinError 32), shuning
+    uchun fayl ustidagi keyingi amallar (``unlink``) faqat shu funksiyadan
+    keyin, ``with`` bloki tashqarisida bajariladi.
+    """
+    with path.open("rb") as fh:
+        return fh.read(size)
+
+
+def _mkdirs(path: Path, created: list[Path]) -> None:
+    """Yetishmayotgan kataloglarni yaratadi va ularni ``created`` ga yozadi."""
+    missing: list[Path] = []
+    cur = path
+    while not cur.exists():
+        missing.append(cur)
+        cur = cur.parent
+    for d in reversed(missing):
+        d.mkdir()
+        created.append(d)
+
+
+def _rollback(files: list[Path], dirs: list[Path]) -> None:
+    """Qisman bajarilgan amalni bekor qiladi: yozilgan fayllar va yaratilgan kataloglar o‘chiriladi.
+
+    Chaqirilganda barcha fayllar allaqachon yopiq bo‘lishi kerak.
+    """
+    for f in reversed(files):
+        try:
+            f.unlink(missing_ok=True)
+        except OSError:
+            pass
+    for d in reversed(dirs):
+        try:
+            d.rmdir()
+        except OSError:
+            pass
+
+
 def save_stream(src: BinaryIO, dest: Path, max_bytes: int) -> int:
     """Oqimni faylga yozadi va hajmni o‘zi sanaydi.
 
-    Limitdan oshsa, qisman yozilgan fayl o‘chiriladi.
+    Limitdan oshsa, qisman yozilgan fayl o‘chiriladi. O‘chirish ``with``
+    bloki yopilgandan keyin bajariladi (Windows: ochiq faylni o‘chirib
+    bo‘lmaydi). ``dest`` allaqachon mavjud bo‘lsa, ``FileExistsError``
+    chiqadi va mavjud fayl o‘chirilmaydi.
     """
     written = 0
+    out = dest.open("xb")
     try:
-        with dest.open("xb") as out:
+        with out:
             while True:
                 chunk = src.read(_CHUNK)
                 if not chunk:
@@ -141,6 +186,7 @@ def save_stream(src: BinaryIO, dest: Path, max_bytes: int) -> int:
                     raise UploadRejected("too_large", f"Fayl hajmi {max_bytes // (1024 * 1024)} MB dan oshdi")
                 out.write(chunk)
     except BaseException:
+        # Bu yerga kelganda ``with out`` bloki faylni yopib bo‘lgan.
         dest.unlink(missing_ok=True)
         raise
     return written
@@ -150,7 +196,9 @@ def extract_zip(zip_path: Path, dest_dir: Path, limits: UploadLimits = UploadLim
     """ZIP arxivni tekshiradi va ruxsat etilgan fayllarni ``dest_dir`` ga ochadi.
 
     Avval barcha yozuvlar tekshiriladi; birorta xavfli yozuv bo‘lsa, hech
-    narsa ochilmaydi.
+    narsa ochilmaydi. Ochish jarayonida xato chiqsa (haqiqiy hajm limitdan
+    oshsa yoki arxiv buzilgan bo‘lsa), shu paytgacha yozilgan barcha fayllar
+    o‘chiriladi.
     """
     try:
         archive = zipfile.ZipFile(zip_path)
@@ -197,32 +245,45 @@ def extract_zip(zip_path: Path, dest_dir: Path, limits: UploadLimits = UploadLim
 
         dest_root = dest_dir.resolve()
         actual_total = 0
-        for info, rel in plan:
-            target = dest_root.joinpath(*rel.parts)
-            if not _inside(dest_root, target):
-                raise UploadRejected("path_traversal", f"Katalogdan chiqishga urinish: {rel}")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            written = 0
-            with archive.open(info) as src, target.open("xb") as out:
-                head = b""
-                while True:
-                    chunk = src.read(_CHUNK)
-                    if not chunk:
-                        break
-                    if not head:
-                        head = chunk[:8192]
-                        if _looks_binary(head):
-                            break
-                    written += len(chunk)
-                    actual_total += len(chunk)
-                    if written > limits.max_file_bytes or actual_total > limits.max_unzipped_bytes:
-                        raise UploadRejected("unzipped_too_large", "Arxiv ochilgandagi hajm limitdan oshdi")
-                    out.write(chunk)
-            if head and _looks_binary(head):
-                target.unlink()
-                result.skipped.append(str(rel))
-                continue
-            result.files.append(str(rel))
+        written_files: list[Path] = []
+        created_dirs: list[Path] = []
+        try:
+            for info, rel in plan:
+                target = dest_root.joinpath(*rel.parts)
+                if not _inside(dest_root, target):
+                    raise UploadRejected("path_traversal", f"Katalogdan chiqishga urinish: {rel}")
+                _mkdirs(target.parent, created_dirs)
+                written = 0
+                binary = False
+                with archive.open(info) as src:
+                    out = target.open("xb")
+                    written_files.append(target)
+                    with out:
+                        while True:
+                            chunk = src.read(_CHUNK)
+                            if not chunk:
+                                break
+                            if written == 0 and _looks_binary(chunk[:8192]):
+                                binary = True
+                                break
+                            written += len(chunk)
+                            actual_total += len(chunk)
+                            if written > limits.max_file_bytes or actual_total > limits.max_unzipped_bytes:
+                                raise UploadRejected("unzipped_too_large", "Arxiv ochilgandagi hajm limitdan oshdi")
+                            out.write(chunk)
+                # Bu yerda fayl yopilgan: endi uni o‘chirish Windows’da ham xavfsiz.
+                if binary:
+                    target.unlink()
+                    written_files.remove(target)
+                    result.skipped.append(str(rel))
+                    continue
+                result.files.append(str(rel))
+        except UploadRejected:
+            _rollback(written_files, created_dirs)
+            raise
+        except (zipfile.BadZipFile, zlib.error, EOFError, NotImplementedError) as exc:
+            _rollback(written_files, created_dirs)
+            raise UploadRejected("bad_zip", "ZIP arxiv buzilgan yoki qo‘llab-quvvatlanmaydigan siqish usuli") from exc
         result.total_bytes = actual_total
     return result
 
@@ -237,10 +298,10 @@ def accept_plain_file(src: BinaryIO, filename: str, dest_dir: Path, limits: Uplo
     if target.exists():
         raise UploadRejected("duplicate", f"Bir xil nomli fayl ikki marta yuklandi: {base}")
     save_stream(src, target, min(limits.max_file_bytes, limits.max_upload_bytes))
-    with target.open("rb") as fh:
-        if _looks_binary(fh.read(8192)):
-            target.unlink()
-            raise UploadRejected("binary", f"Fayl matnli emas: {base}")
+    # Avval o‘qib, faylni yopamiz; o‘chirish faqat undan keyin (Windows: WinError 32).
+    if _looks_binary(_read_head(target)):
+        target.unlink()
+        raise UploadRejected("binary", f"Fayl matnli emas: {base}")
     return rel.name
 
 
@@ -254,34 +315,41 @@ def stage_directory(src_dir: Path, dest_dir: Path, limits: UploadLimits = Upload
     src_root = Path(src_dir).resolve()
     if not src_root.is_dir():
         raise UploadRejected("not_a_directory", f"Katalog topilmadi: {src_dir}")
+    dest_root = dest_dir.resolve()
     result = AcceptedFiles()
     total = 0
-    for path in sorted(_walk(src_root)):
-        rel_posix = path.relative_to(src_root).as_posix()
-        if path.is_symlink():
-            result.skipped.append(rel_posix)
-            continue
-        if not is_allowed_name(rel_posix):
-            result.skipped.append(rel_posix)
-            continue
-        rel = safe_relative_path(rel_posix, limits)
-        size = path.stat().st_size
-        if size > limits.max_file_bytes:
-            raise UploadRejected("file_too_large", f"Fayl juda katta: {rel_posix}")
-        total += size
-        if total > limits.max_unzipped_bytes:
-            raise UploadRejected("too_large", "Katalogdagi fayllar umumiy hajmi limitdan oshdi")
-        if len(result.files) >= limits.max_entries:
-            raise UploadRejected("too_many_entries", f"{limits.max_entries} tadan ko‘p fayl")
-        with path.open("rb") as fh:
-            if _looks_binary(fh.read(8192)):
+    written_files: list[Path] = []
+    created_dirs: list[Path] = []
+    try:
+        for path in sorted(_walk(src_root)):
+            rel_posix = path.relative_to(src_root).as_posix()
+            if path.is_symlink() or not is_allowed_name(rel_posix):
                 result.skipped.append(rel_posix)
                 continue
-        target = dest_dir.resolve().joinpath(*rel.parts)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("rb") as fh:
-            save_stream(fh, target, limits.max_file_bytes)
-        result.files.append(str(rel))
+            rel = safe_relative_path(rel_posix, limits)
+            size = path.stat().st_size
+            if size > limits.max_file_bytes:
+                raise UploadRejected("file_too_large", f"Fayl juda katta: {rel_posix}")
+            total += size
+            if total > limits.max_unzipped_bytes:
+                raise UploadRejected("too_large", "Katalogdagi fayllar umumiy hajmi limitdan oshdi")
+            if len(result.files) >= limits.max_entries:
+                raise UploadRejected("too_many_entries", f"{limits.max_entries} tadan ko‘p fayl")
+            if _looks_binary(_read_head(path)):
+                result.skipped.append(rel_posix)
+                continue
+            target = dest_root.joinpath(*rel.parts)
+            if not _inside(dest_root, target):
+                raise UploadRejected("path_traversal", f"Katalogdan chiqishga urinish: {rel_posix}")
+            _mkdirs(target.parent, created_dirs)
+            with path.open("rb") as fh:
+                save_stream(fh, target, limits.max_file_bytes)
+            written_files.append(target)
+            result.files.append(str(rel))
+    except BaseException:
+        # Barcha fayllar yopilgan: qisman nusxani bekor qilamiz.
+        _rollback(written_files, created_dirs)
+        raise
     result.total_bytes = total
     return result
 

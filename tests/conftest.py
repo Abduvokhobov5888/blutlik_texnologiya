@@ -101,3 +101,15 @@ def settings(tmp_path: Path):
     from bulutskan.config import Settings
 
     return Settings(_env_file=None, data_dir=tmp_path / "data")  # type: ignore[call-arg]
+
+
+@pytest.fixture(autouse=True)
+def windows_file_semantics(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    """Barcha testlarda Windows qoidasi: ochiq faylni o‘chirib bo‘lmaydi (WinError 32).
+
+    Bulutli muhit Linux’da ishlaydi, platforma esa Windows’da ishlatiladi.
+    Bu fixture Windows’dagina chiqadigan xatolarni Linux’da ham ushlaydi.
+    """
+    from tests.winfs import install
+
+    return install(monkeypatch, tmp_path)

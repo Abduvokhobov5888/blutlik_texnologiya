@@ -99,7 +99,7 @@ Kutilgan natija: `BulutSkan 0.1.0`.
 python -m pytest -q
 ```
 
-Kutilgan natija: `352 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
+Kutilgan natija: `363 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
 
 ## 5. Vositalar yaxlitligi
 

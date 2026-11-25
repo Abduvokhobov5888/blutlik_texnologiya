@@ -180,3 +180,20 @@ class Setting(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[Any] = mapped_column(JSON)
+
+
+class SetupTask(Base):
+    """Birinchi sozlash ustasining vazifasi (worker bajaradi)."""
+
+    __tablename__ = "setup_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    action: Mapped[str] = mapped_column(String(24))  # check, pull, lock_checkov, build_checkov, db_update
+    status: Mapped[str] = mapped_column(String(12), default="queued", index=True)
+    progress: Mapped[int] = mapped_column(Integer, default=0)  # 0-100, aniq foiz yo‘q bo‘lsa -1
+    message: Mapped[str] = mapped_column(Text, default="")
+    result: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

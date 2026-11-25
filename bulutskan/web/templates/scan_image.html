@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Obraz tekshiruvi") }}{% endblock %}
+{% block heading %}{{ t("Obraz tekshiruvi") }}{% endblock %}
+{% block content %}
+<section class="card">
+  <p>{{ t("Obraz yuklab olinadi, .tar arxivga saqlanadi va Trivy hamda Grype bilan internetsiz tekshiriladi. Obrazning o‘zi ishga tushirilmaydi.") }}</p>
+  {% if remaining is not none %}<p class="muted small">{{ t("Bugungi qolgan kvota") }}: {{ remaining }}</p>{% endif %}
+  {% if error %}<div class="alert alert-red">{{ t(error) }}</div>{% endif %}
+  <form method="post" action="/scan/image" enctype="multipart/form-data" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    {% if guest %}
+    <label>{{ t("Eksperimentdagi obraz") }}<select name="image">{% for img in demo_images %}<option>{{ img }}</option>{% endfor %}</select></label>
+    {% else %}
+    <label>{{ t("Obraz nomi") }}<input name="image" placeholder="nginx:1.21" maxlength="255" list="demo-images"></label>
+    <datalist id="demo-images">{% for img in demo_images %}<option value="{{ img }}">{% endfor %}</datalist>
+    <p class="muted small">{{ t("yoki") }}</p>
+    <label>{{ t(".tar fayl (docker save natijasi)") }}<input type="file" name="tar" accept=".tar"></label>
+    <label>{{ t(".tar uchun obraz nomi (ixtiyoriy, EOL tekshiruvi uchun)") }}<input name="image_name" placeholder="nginx:1.21" maxlength="255"></label>
+    {% endif %}
+    <button class="btn btn-primary" type="submit">{{ t("Tekshirish") }}</button>
+  </form>
+</section>
+{% endblock %}

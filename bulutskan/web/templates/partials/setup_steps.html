@@ -1,0 +1,38 @@
+{% set running = task and task.status in ("queued", "running") %}
+<div {% if running %}hx-get="/tools/status" hx-trigger="every 1s" hx-target="#setup-steps" hx-swap="innerHTML"{% endif %}>
+{% if running %}
+<div class="card progress-card">
+  <p><span class="spinner"></span> {{ t(task.message or "Bajarilmoqda…") }}</p>
+  {% if task.progress >= 0 %}<progress value="{{ task.progress }}" max="100"></progress> <span class="small">{{ task.progress }}%</span>{% else %}<progress></progress>{% endif %}
+</div>
+{% elif task and task.status == "failed" %}
+<div class="alert alert-red"><strong>{{ t("Amal bajarilmadi") }}:</strong> {{ task.message }}</div>
+{% endif %}
+{% set st = setup_state or {} %}
+{% set steps = [("docker", "1. Docker"), ("tools", t("2. Vosita obrazlari va digestlar")), ("checkov", t("3. Checkov obrazi")), ("databases", t("4. Zaifliklar bazalari"))] %}
+<div class="steps">
+{% for key, title in steps %}
+  {% set s = st.get(key) or {} %}
+  {% set status = s.get("status", "pending") %}
+  <div class="card step step-{{ status }}">
+    <div class="step-head"><span class="step-icon">{% if status == "green" %}<svg class="ic"><use href="#i-ok"/></svg>{% elif status == "yellow" %}<svg class="ic"><use href="#i-alert"/></svg>{% elif status == "red" %}<svg class="ic"><use href="#i-x"/></svg>{% else %}…{% endif %}</span>
+      <h3>{{ title }}</h3><span class="state">{{ t({"green": "tayyor", "yellow": "e’tibor bering", "red": "kerak", "pending": "tekshirilmagan"}[status]) }}</span></div>
+    <p>{{ t(s.get("message", "Hali tekshirilmagan")) }}</p>
+    {% if key == "tools" and s.get("items") %}<ul class="small mono">{% for it in s["items"] %}<li>{{ it.tool }}: {{ it.status }}</li>{% endfor %}</ul>{% endif %}
+    {% if key == "databases" and s.get("items") %}<ul class="small">{% for it in s["items"] %}<li>{{ t(it.message) }}</li>{% endfor %}</ul>{% endif %}
+    {% if not running %}
+      {% if key == "docker" and status == "red" %}
+        <a class="btn btn-sm" href="/help/docker">{{ t("O‘rnatish ko‘rsatmasi") }}</a>
+        <form method="post" action="/tools/demo-mode" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="btn btn-sm btn-primary">{{ t("Namoyish rejimida davom etish") }}</button></form>
+      {% elif s.get("action") %}
+        {% set labels = {"pull": "Yuklab olish", "lock_checkov": "Qulflash", "build_checkov": "Yig‘ish", "db_update": "Yuklab olish"} %}
+        <button class="btn btn-sm btn-primary" hx-post="/tools/run" hx-vals='{"action": "{{ s["action"] }}"}' hx-target="#setup-steps">{{ t(labels[s["action"]]) }}</button>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endfor %}
+</div>
+{% if not running %}<p><button class="btn" hx-post="/tools/run" hx-vals='{"action": "check"}' hx-target="#setup-steps">{{ t("Qayta tekshirish") }}</button>
+{% if st.get("docker", {}).get("status") == "green" and (st.get("databases") or {}).get("status") != "red" %} <button class="btn btn-ghost" hx-post="/tools/run" hx-vals='{"action": "db_update"}' hx-target="#setup-steps">{{ t("Bazalarni yangilash") }}</button>{% endif %}</p>{% endif %}
+{% if st.get("checked_at") %}<p class="muted small">{{ t("Oxirgi tekshiruv") }}: {{ st.checked_at }} UTC</p>{% endif %}
+</div>

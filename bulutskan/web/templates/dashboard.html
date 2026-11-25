@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Boshqaruv paneli") }}{% endblock %}
+{% block heading %}{{ t("Boshqaruv paneli") }}{% endblock %}
+{% block content %}
+<section class="cards">
+  <div class="card stat"><span class="label">{{ t("Jami tekshiruvlar") }}</span><strong>{{ cards.total }}</strong><span class="muted small">{{ t("shundan namoyish") }}: {{ cards.demo }}</span></div>
+  <div class="card stat stat-critical"><span class="label">{{ t("Kritik topilmalar") }}</span><strong>{{ cards.critical }}</strong><span class="muted small">{{ t("yuqori") }}: {{ cards.high }}</span></div>
+  <div class="card stat"><span class="label">{{ t("Tasdiqlangan ulushi") }}</span><strong>{{ fmt_num(cards.confirmed_share * 100, 1) if cards.confirmed_share is not none else "—" }}%</strong><span class="muted small">{{ t("kamida ikki vosita topgan") }}</span></div>
+  <div class="card stat stat-eol"><span class="label">{{ t("Eskirgan obrazlar") }}</span><strong>{{ cards.eol }}</strong><span class="muted small">{{ t("navbatda") }}: {{ cards.active }}</span></div>
+</section>
+<section class="grid2">
+  <div class="card"><h3>{{ t("Vositalar bo‘yicha topilmalar") }}</h3><canvas id="chart-tools" height="220"></canvas></div>
+  <div class="card"><h3>{{ t("Jiddiylik taqsimoti (konsensus guruhlari)") }}</h3><canvas id="chart-severity" height="220"></canvas></div>
+  <div class="card span2"><h3>{{ t("Trivy va Grype mosligi (Jaccard)") }}</h3><canvas id="chart-jaccard" height="110"></canvas></div>
+  <div class="card"><h3>{{ t("Vaqt bo‘yicha tekshiruvlar") }}</h3><canvas id="chart-timeline" height="200"></canvas></div>
+  <div class="card"><h3>{{ t("Zaifliklar bazalari") }}</h3>
+    <table class="table small"><tbody>
+    {% for name, info in dbs.items() %}
+      {% set meta = info.metadata or {} %}
+      <tr><td>{{ t(info.label) }}</td><td>{% if info.present %}<span class="pill pill-ok">{{ t("bor") }}</span>{% else %}<span class="pill pill-red">{{ t("yo‘q") }}</span>{% endif %}</td><td>{{ meta.UpdatedAt or meta.built or "—" }}</td></tr>
+    {% endfor %}
+    </tbody></table>
+    {% if user.role == "admin" %}<a class="btn btn-sm" href="/tools">{{ t("Vositalar va bazalar") }}</a>{% endif %}
+  </div>
+</section>
+<div id="dashboard-data" data-json="{{ charts_json }}" hidden></div>
+<section class="card">
+  <h3>{{ t("Oxirgi tekshiruvlar") }}</h3>
+  {% include "partials/scan_table.html" with context %}
+</section>
+{% endblock %}

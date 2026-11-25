@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Vositalar va bazalar") }}{% endblock %}
+{% block heading %}{{ t("Birinchi sozlash: vositalar va bazalar") }}{% endblock %}
+{% block content %}
+<section class="card">
+  <p>{{ t("Usta tartib bilan tekshiradi: Docker → vosita obrazlari (sha256 digest bo‘yicha) → Checkov obrazi → zaifliklar bazalari. Internet kerak bo‘lgan amallar proksini Docker Desktop sozlamasidan oladi.") }}</p>
+</section>
+<div id="setup-steps" {% if not setup_state %}hx-post="/tools/run" hx-vals='{"action": "check"}' hx-trigger="load" hx-target="#setup-steps"{% endif %}>
+  {% include "partials/setup_steps.html" %}
+</div>
+{% endblock %}

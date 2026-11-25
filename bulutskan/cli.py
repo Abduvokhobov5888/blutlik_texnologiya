@@ -13,6 +13,7 @@ Chiqish kodlari: 0 — chegaradan oshmadi; 1 — chegaradan oshdi;
 
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Iterable
 from enum import StrEnum
@@ -574,6 +575,76 @@ def worker_cmd() -> None:
     typer.echo(f"Worker ishga tushdi: {settings.effective_worker_slots} slot")
     Worker(settings, db, client_factory=lambda: make_client(settings)).run_forever(stop)
     db.dispose()
+
+
+def _free_port(host: str, start: int, tries: int = 10) -> int:
+    """Lokal rejim: band bo‘lmagan birinchi port (8000, 8001, …)."""
+    import socket
+
+    for port in range(start, start + tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.bind((host, port))
+            except OSError:
+                continue
+            return port
+    return start
+
+
+def _open_browser_when_ready(url: str) -> None:
+    import threading
+    import time
+    import urllib.request
+    import webbrowser
+
+    def wait() -> None:
+        for _ in range(120):
+            try:
+                with urllib.request.urlopen(url + "health", timeout=2) as resp:  # noqa: S310 - faqat 127.0.0.1
+                    if resp.status == 200:
+                        webbrowser.open(url)
+                        return
+            except OSError:
+                time.sleep(0.5)
+
+    threading.Thread(target=wait, daemon=True).start()
+
+
+@app.command("serve")
+def serve(
+    host: str | None = typer.Option(None, "--host", help="Tinglash manzili (sukut: 127.0.0.1)."),
+    port: int | None = typer.Option(None, "--port", help="Port (sukut: 8000)."),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Brauzerni avtomatik ochmaslik."),
+) -> None:
+    """Veb-interfeysni ishga tushirish. Lokal rejimda worker ham shu jarayonda ishlaydi."""
+    import uvicorn
+
+    from bulutskan.web.app import create_app
+
+    settings = get_settings()
+    host = host or settings.host
+    port = port or settings.port
+    if not settings.is_server and host not in ("127.0.0.1", "localhost", "::1"):
+        typer.secho(f"Ogohlantirish: lokal rejimda {host} manzili tashqi tarmoqqa ochiq bo‘lishi mumkin", fg="yellow")
+    if not settings.is_server:
+        port = _free_port(host, port)
+    url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '::') else host}:{port}/"
+    web_app = create_app(settings)
+    typer.secho(f"BulutSkan {__version__} ishlayapti: {url}", fg=typer.colors.GREEN, bold=True)
+    typer.echo(f"Ma’lumotlar katalogi: {settings.data_path}")
+    if not settings.is_server:
+        typer.echo("Dasturni to‘xtatish uchun shu oynani yoping (yoki Ctrl+C).")
+        if settings.open_browser and not no_browser:
+            _open_browser_when_ready(url)
+    uvicorn.run(
+        web_app,
+        host=host,
+        port=port,
+        log_level="info",
+        proxy_headers=settings.is_server,
+        forwarded_allow_ips=os.environ.get("BULUTSKAN_TRUSTED_PROXY", "127.0.0.1"),
+        server_header=False,
+    )
 
 
 def main() -> None:  # pragma: no cover

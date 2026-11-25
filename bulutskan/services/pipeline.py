@@ -28,6 +28,7 @@ from bulutskan.core.dedup import dedup_findings
 from bulutskan.core.eol import EolResult, detect_eol
 from bulutskan.core.models import SEVERITY_ORDER, ScanKind, Severity, Tool, ToolReport
 from bulutskan.core.normalize import match_path
+from bulutskan.scanner.dbupdate import database_status
 from bulutskan.scanner.docker import DockerClient
 from bulutskan.scanner.iac import run_iac_tools
 from bulutskan.scanner.image import ImageInput, existing_tar, pull_and_save, run_image_tools
@@ -267,8 +268,13 @@ class Scanner:
 
     def _scan_image_input(self, ws: Workspace, target: str, image: ImageInput,
                           integrity: IntegrityReport, source: str) -> ScanOutcome:
+        integrity_info = integrity.to_dict()
+        integrity_info["databases"] = {
+            name: (info.get("metadata") or {}).get("UpdatedAt") or (info.get("metadata") or {}).get("built")
+            for name, info in database_status(self.settings).items()
+        }
         outcome = ScanOutcome(uid=ws.uid, kind=ScanKind.IMAGE, target=target, status=ScanStatus.RUNNING,
-                              image=image.to_dict(), integrity=integrity.to_dict(), source=source)
+                              image=image.to_dict(), integrity=integrity_info, source=source)
         runs = run_image_tools(self.client, integrity, self.settings, ws, image, self.settings.reports_dir / ws.uid)
         raw = {r.tool: r.report for r in runs if r.ok and r.report is not None}
         reports, consensus, eol = analyze_image(raw, image.reference)

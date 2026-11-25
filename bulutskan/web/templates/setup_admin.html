@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Birinchi sozlash") }}{% endblock %}
+{% block content %}
+<div class="auth-card card">
+  <div class="auth-brand"><img src="/static/img/favicon.svg" alt="" width="48" height="48"><div><h2>{{ t("Xush kelibsiz!") }}</h2><p class="muted">{{ t("Birinchi sozlash: administrator akkauntini yarating.") }}</p></div></div>
+  <p class="small">{{ t("Bu akkaunt faqat shu kompyuterda saqlanadi. Parol bcrypt bilan xeshlanadi va hech qayerga yuborilmaydi.") }}</p>
+  {% if error %}<div class="alert alert-red">{{ t(error) }}</div>{% endif %}
+  <form method="post" action="/setup/admin" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ t("Login") }}<input name="username" value="admin" autocomplete="username" required maxlength="32"></label>
+    <label>{{ t("Parol (kamida 12 belgi)") }}<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="72"></label>
+    <label>{{ t("Parolni takrorlang") }}<input name="password2" type="password" autocomplete="new-password" required minlength="12" maxlength="72"></label>
+    <button class="btn btn-primary" type="submit">{{ t("Yaratish") }}</button>
+  </form>
+</div>
+{% endblock %}

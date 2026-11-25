@@ -64,6 +64,19 @@ def _finding_row(scan_id: int, run_id: int, f: Finding) -> FindingRow:
     )
 
 
+def _tool_metadata(meta: dict[str, Any]) -> dict[str, Any]:
+    """Vosita metama’lumotlari; Grype bazasidan faqat yig‘ilgan sana va sxema olinadi."""
+    out = {k: v for k, v in meta.items() if k != "db"}
+    db = meta.get("db")
+    if isinstance(db, dict):
+        raw_status = db.get("status")
+        status: dict[str, Any] = raw_status if isinstance(raw_status, dict) else db
+        out["db"] = {k: status.get(k) for k in ("built", "schemaVersion", "from", "valid") if k in status}
+        if isinstance(out["db"].get("from"), str):
+            out["db"]["from"] = out["db"]["from"].split("?", 1)[0]
+    return out
+
+
 def save_outcome(session: Session, scan: Scan, outcome: ScanOutcome) -> None:
     """``outcome`` ni ``scan`` qatoriga va bog‘liq jadvallarga yozadi."""
     scan.status = outcome.status
@@ -130,7 +143,7 @@ def save_outcome(session: Session, scan: Scan, outcome: ScanOutcome) -> None:
             finding_count=len(report.findings) if report else 0,
             raw_count=int(report.metadata.get("raw_count", len(report.findings))) if report else 0,
             passed_count=report.passed_count if report else None,
-            metadata_json={k: v for k, v in (report.metadata if report else {}).items() if k != "db"},
+            metadata_json=_tool_metadata(report.metadata if report else {}),
         )
         session.add(row)
         session.flush()

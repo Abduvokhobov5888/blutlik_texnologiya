@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Solishtirish") }}{% endblock %}
+{% block heading %}{{ t("Ikki tekshiruvni solishtirish") }}{% endblock %}
+{% block content %}
+<form class="filters card" method="get" action="/compare">
+  {% for field, value in (("a", a), ("b", b)) %}
+  <label>{{ t("Eski tekshiruv") if field == "a" else t("Yangi tekshiruv") }}
+    <select name="{{ field }}">{% for sc in options %}<option value="{{ sc.uid }}" {% if sc.uid == value %}selected{% endif %}>{{ fmt_dt(sc.created_at) }} · {{ sc.target }}{% if sc.is_demo %} ({{ t("namoyish") }}){% endif %}</option>{% endfor %}</select></label>
+  {% endfor %}
+  <button class="btn btn-primary" type="submit">{{ t("Solishtirish") }}</button>
+</form>
+{% if result %}
+{% if not result.same_kind %}<div class="alert alert-warn">{{ t("Turli turdagi tekshiruvlar tanlandi (IaC va obraz): solishtirish ma’nosi cheklangan.") }}</div>{% endif %}
+<section class="cards">
+  <div class="card stat stat-critical"><span class="label">{{ t("Yangi topilmalar") }}</span><strong>{{ result.new|length }}</strong></div>
+  <div class="card stat stat-ok"><span class="label">{{ t("Yo‘qolgan (tuzatilgan)") }}</span><strong>{{ result.fixed|length }}</strong></div>
+  <div class="card stat"><span class="label">{{ t("O‘zgarmagan") }}</span><strong>{{ result.common }}</strong></div>
+  <div class="card stat"><span class="label">Jaccard</span><strong>{{ fmt_num(result.jaccard) }}</strong><span class="muted small">{{ result.count_a }} → {{ result.count_b }}</span></div>
+</section>
+<section class="grid2">
+  {% for title, rows in ((t("Yangi topilmalar"), result.new), (t("Yo‘qolgan (tuzatilgan)"), result.fixed)) %}
+  <div class="card"><h3>{{ title }}</h3><table class="table small"><tbody>
+  {% for g in rows %}<tr><td><span class="sev sev-{{ sev_class[g.severity] }}">{{ t(g.severity) }}</span></td><td class="mono">{{ g.key if g.kind == "vulnerability" else (g.category or "") ~ " " ~ g.title }}</td></tr>{% else %}<tr><td class="muted">—</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

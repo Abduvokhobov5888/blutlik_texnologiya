@@ -38,7 +38,7 @@ include = ["bulutskan*"]
 
 [tool.setuptools.package-data]
 bulutskan = [
-    "resources/*",
+    "resources/**/*",
     "web/templates/**/*",
     "web/static/**/*",
     "web/i18n/*.json",

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ scan.target }}{% endblock %}
+{% block heading %}{{ scan.target }}{% endblock %}
+{% block content %}
+{% set summ = scan.summary or {} %}
+{% set gbs = summ.get("groups_by_severity", {}) %}
+<section class="card meta">
+  <span class="status status-{{ scan.status }}">{{ t(status_uz.get(scan.status, scan.status)) }}</span>
+  <span>{{ t("IaC fayllari") if scan.kind == "iac" else t("Konteyner obrazi") }}</span>
+  {% if scan.is_demo %}<span class="pill pill-demo">{{ t("namoyish: III bob eksperimenti") }}</span>{% endif %}
+  <span class="muted">{{ t("Boshlangan") }}: {{ fmt_dt(scan.created_at) }}</span>
+  <span class="muted">{{ t("Tugagan") }}: {{ fmt_dt(scan.finished_at) }}</span>
+  {% if view.owner %}<span class="muted">{{ t("Foydalanuvchi") }}: {{ view.owner }}</span>{% endif %}
+  {% if scan.status in ("done", "partial") %}
+  <span class="spacer"></span>
+  <a class="btn btn-sm" href="/scans/{{ scan.uid }}/export.json">JSON</a>
+  <a class="btn btn-sm btn-primary" href="/scans/{{ scan.uid }}/report.docx">{{ t("DOCX hisobot") }}</a>
+  {% endif %}
+</section>
+
+{% if scan.status in ("queued", "running") %}
+<div hx-get="/scans/{{ scan.uid }}/status" hx-trigger="every 2s" hx-swap="innerHTML">{% include "partials/scan_status.html" %}</div>
+{% endif %}
+{% if scan.status == "failed" %}<div class="alert alert-red"><strong>{{ t("Tekshiruv bajarilmadi") }}.</strong> {{ scan.error or "" }}</div>{% endif %}
+
+{% if (scan.eol or {}).get("is_eol") %}
+<div class="eol-banner"><svg class="ic"><use href="#i-alert"/></svg>
+  <div><strong>{{ t("Bazaviy obrazning qo‘llab-quvvatlash muddati tugagan. Skanerlar natijalari to‘liq emas, obrazni almashtiring.") }}</strong>
+  <ul>{% for r in scan.eol.reasons %}<li>{{ r.detail }}</li>{% endfor %}</ul></div></div>
+{% endif %}
+
+{% if scan.failures %}
+<section class="card card-warn"><h3>{{ t("Ishlamagan vositalar") }}</h3>
+  <p class="small">{{ t("Tekshiruv qisman: konsensus va Jaccard faqat ishlagan vositalar bo‘yicha hisoblangan.") }}</p>
+  <table class="table small"><thead><tr><th>{{ t("Vosita") }}</th><th>{{ t("Sabab") }}</th><th>{{ t("Chiqish kodi") }}</th><th>{{ t("Tushuntirish") }}</th></tr></thead><tbody>
+  {% for f in scan.failures %}<tr><td>{{ f.tool }}</td><td><code>{{ f.reason_code }}</code></td><td>{{ f.returncode if f.returncode is not none else "—" }}</td><td>{{ f.error }}</td></tr>{% endfor %}
+  </tbody></table></section>
+{% endif %}
+
+{% if scan.status in ("done", "partial") %}
+<section class="cards">
+  <div class="card stat"><span class="label">{{ t("Noyob topilmalar") }}</span><strong>{{ summ.get("groups_total", 0) }}</strong><span class="muted small">{{ t("vositalar bo‘yicha") }}: {{ summ.get("findings_total", 0) }}</span></div>
+  <div class="card stat stat-ok"><span class="label">{{ t("Tasdiqlangan") }}</span><strong>{{ summ.get("confirmed", 0) }}</strong><span class="muted small">{{ t("kamida ikki vosita") }}</span></div>
+  <div class="card stat"><span class="label">{{ t("Tekshirish talab etiladi") }}</span><strong>{{ summ.get("needs_review", 0) }}</strong>{% if scan.kind == "image" %}<span class="muted small">{{ t("CPE asosida") }}: {{ summ.get("cpe_suspect", 0) }}</span>{% endif %}</div>
+  <div class="card stat"><span class="label">Jaccard</span>
+    {% for k, v in (scan.jaccard or {}).items() %}<span class="jac">{{ t("uchala vosita") if k == "all" else k.replace("|", " – ") }}: <strong>{{ fmt_num(v) }}</strong></span>{% endfor %}
+    {% if scan.jaccard_core is not none %}<span class="jac muted">{{ t("asosiy") }}: {{ fmt_num(scan.jaccard_core) }}</span>{% endif %}
+  </div>
+</section>
+
+<section class="grid2">
+  <div class="card"><h3>{{ t("Jiddiylik bo‘yicha jadval") }}</h3>
+    <table class="table small"><thead><tr><th>{{ t("Vosita") }}</th>{% for s in severities %}<th><span class="sev sev-{{ sev_class[s] }}">{{ t(s) }}</span></th>{% endfor %}</tr></thead><tbody>
+    {% for tool, counts in view.severity_table.items() %}<tr><td>{{ tool }}</td>{% for s in severities %}<td>{{ counts.get(s, 0) }}</td>{% endfor %}</tr>{% endfor %}
+    <tr class="total"><td>{{ t("Konsensus guruhlari") }}</td>{% for s in severities %}<td>{{ gbs.get(s, 0) }}</td>{% endfor %}</tr>
+    </tbody></table>
+    <p class="muted small">{{ t("UNKNOWN — vosita darajani bermagan (Checkov). Guruh darajasi boshqa vositalarning ma’lum darajasidan olinadi.") }}</p>
+  </div>
+  <div class="card"><h3>{{ t("Vositalar") }}</h3>
+    <table class="table small"><thead><tr><th>{{ t("Vosita") }}</th><th>{{ t("Versiya") }}</th><th>{{ t("Topilmalar") }}</th><th>{{ t("Vaqt, s") }}</th></tr></thead><tbody>
+    {% for r in view.tool_runs %}<tr><td><strong>{{ r.tool }}</strong> {% if not r.ok %}<span class="pill pill-red">{{ t("xato") }}</span>{% endif %}<div class="mono muted ref" title="{{ r.image_ref or '' }}">{{ short_ref(r.image_ref) }}</div></td><td>{{ r.tool_version or "—" }}</td><td>{{ r.finding_count }}{% if r.raw_count != r.finding_count %} <span class="muted">({{ t("xom") }}: {{ r.raw_count }})</span>{% endif %}</td><td>{{ fmt_num(r.duration_s, 1) }}</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</section>
+
+{% if scan.ground_truth %}
+{% set gt = scan.ground_truth %}
+<section class="card"><h3>{{ t("Ground truth bo‘yicha baholash (namoyish fayllari, III bob usuli)") }}</h3>
+  {% if not gt.get("complete", true) %}<div class="alert alert-warn">{{ t("Natija to‘liq emas: biror vosita ishlamagan, III bob bilan solishtirib bo‘lmaydi.") }}</div>{% endif %}
+  <table class="table small"><thead><tr><th>{{ t("Vosita") }}</th><th>{{ t("Topildi") }}</th><th>Recall</th><th>Precision</th><th>F1</th></tr></thead><tbody>
+  {% for n, ev in gt.tools.items() %}<tr><td>{{ n }}</td><td><strong>{{ ev.tp }}/{{ ev.gt }}</strong></td><td>{{ fmt_num(ev.recall) }}</td><td>{{ fmt_num(ev.precision) }}</td><td>{{ fmt_num(ev.f1) }}</td></tr>{% endfor %}
+  </tbody></table>
+  <p class="small">{% for pair, info in gt.overlap.items() %}Jaccard {{ pair }}: <strong>{{ fmt_num(info.jaccard) }}</strong>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% if gt.missed_by_all %}<p class="small">{{ t("Hech bir vosita topmagan") }}: {{ gt.missed_by_all|join(", ") }}</p>{% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h3>{{ t("Konsensus guruhlari") }}</h3>
+  <form class="filters" hx-get="/scans/{{ scan.uid }}/groups" hx-target="#groups" hx-trigger="change, submit" hx-swap="innerHTML">
+    <label>{{ t("Belgi") }}<select name="consensus"><option value="">{{ t("Hammasi") }}</option><option value="confirmed">{{ t("Tasdiqlangan") }}</option><option value="needs_review">{{ t("Tekshirish talab etiladi") }}</option></select></label>
+    <label>{{ t("Daraja (kamida)") }}<select name="severity"><option value="">{{ t("Hammasi") }}</option>{% for s in severities[:4] %}<option value="{{ s }}">{{ t(s) }}</option>{% endfor %}</select></label>
+    {% if scan.kind == "image" %}<label class="check"><input type="checkbox" name="cpe" value="1"> {{ t("Faqat CPE asosida") }}</label>{% endif %}
+    <label>{{ t("Qidirish") }}<input name="q" placeholder="CVE-2023-…" maxlength="100"></label>
+  </form>
+  <div id="groups" hx-get="/scans/{{ scan.uid }}/groups" hx-trigger="load" hx-swap="innerHTML"><p class="muted">{{ t("Yuklanmoqda…") }}</p></div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,9 @@
+<div class="card">
+  <h3>{{ t("Reyting") }}</h3>
+  <canvas id="chart-ahp" height="230"></canvas>
+  <div id="ahp-data" data-json="{{ chart_json }}" hidden></div>
+  <table class="table small"><thead><tr><th>#</th><th>{{ t("Vosita") }}</th><th>{{ t("Ball") }}</th></tr></thead><tbody>
+  {% for r in ranked %}<tr><td>{{ r.position }}</td><td>{{ r.tool }}</td><td><strong>{{ fmt_num(r.score) }}</strong></td></tr>{% endfor %}
+  </tbody></table>
+  <p class="small muted">{{ t("Normallashgan vaznlar") }}: {% for w in weights %}K{{ loop.index }} = {{ fmt_num(w) }}{% if not loop.last %}, {% endif %}{% endfor %}</p>
+</div>

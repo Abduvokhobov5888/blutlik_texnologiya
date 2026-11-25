@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ t("IaC tekshiruvi") }}{% endblock %}
+{% block heading %}{{ t("IaC tekshiruvi") }}{% endblock %}
+{% block content %}
+<section class="card">
+  <p>{{ t("Terraform, Kubernetes YAML va Dockerfile fayllari Checkov, KICS va Trivy bilan tekshiriladi. Natijalar xato toifasi bo‘yicha moslashtiriladi.") }}</p>
+  {% if remaining is not none %}<p class="muted small">{{ t("Bugungi qolgan kvota") }}: {{ remaining }}</p>{% endif %}
+  {% if error %}<div class="alert alert-red">{{ t(error) }}</div>{% endif %}
+  <form method="post" action="/scan/iac" enctype="multipart/form-data" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    {% if not guest %}
+    <label>{{ t("Fayllar yoki ZIP arxiv") }}<input type="file" name="files" multiple accept=".tf,.tfvars,.hcl,.yaml,.yml,.json,.zip,Dockerfile,.dockerfile"></label>
+    <p class="muted small">{{ t("Ruxsat etilgan: .tf, .tfvars, .hcl, .yaml, .yml, .json, Dockerfile, .zip. Boshqa fayllar o‘tkazib yuboriladi. Fayllar tekshiruvdan keyin o‘chiriladi.") }}</p>
+    <label class="check"><input type="checkbox" name="demo" value="1"> {{ t("Yoki namoyish fayllarini tekshirish (40 ta ataylab qilingan xato)") }}</label>
+    {% else %}
+    <input type="hidden" name="demo" value="1">
+    <p>{{ t("Mehmon sifatida faqat namoyish fayllarini tekshirish mumkin.") }}</p>
+    {% endif %}
+    <button class="btn btn-primary" type="submit">{{ t("Tekshirish") }}</button>
+  </form>
+</section>
+{% endblock %}

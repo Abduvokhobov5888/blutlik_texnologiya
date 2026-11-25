@@ -110,6 +110,13 @@ class Settings(BaseSettings):
     rate_limit_per_min: int = Field(default=120, ge=1)
     session_hours: int = Field(default=8, ge=1)
     session_idle_min: int = Field(default=30, ge=1)
+    #: Server rejimida ruxsat etilgan registrlar (SSRF himoyasi).
+    allowed_registries: list[str] = Field(
+        default_factory=lambda: ["docker.io", "ghcr.io", "quay.io", "mcr.microsoft.com", "public.ecr.aws",
+                                 "registry.gitlab.com"]
+    )
+    #: Lokal rejim: ishga tushganda brauzerni ochish.
+    open_browser: bool = True
 
     @field_validator("mode")
     @classmethod

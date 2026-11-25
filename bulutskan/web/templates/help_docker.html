@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Docker{% endblock %}
+{% block heading %}{{ t("Docker Desktop’ni o‘rnatish") }}{% endblock %}
+{% block content %}
+<section class="card prose">
+  <p>{{ t("BulutSkan skanerlarni (Trivy, Grype, KICS, Checkov) alohida, tarmoqsiz Docker konteynerlarida ishga tushiradi. Shuning uchun kompyuterda Docker Desktop bo‘lishi kerak.") }}</p>
+  <ol>
+    <li>{{ t("Windows 11 da WSL 2 ni yoqing: PowerShell’ni administrator sifatida oching va «wsl --install» buyrug‘ini bajaring, keyin kompyuterni qayta ishga tushiring.") }}</li>
+    <li>{{ t("Docker Desktop o‘rnatuvchisini rasmiy saytdan yuklab oling va o‘rnating (WSL 2 rejimini tanlang).") }} <span class="mono">https://docs.docker.com/desktop/setup/install/windows-install/</span></li>
+    <li>{{ t("Tashkilot proksi-serveri bo‘lsa: Docker Desktop → Settings → Resources → Proxies bo‘limida manzilni http:// bilan kiriting.") }}</li>
+    <li>{{ t("Settings → Resources bo‘limida Docker’ga kamida 4 GB xotira ajrating.") }}</li>
+    <li>{{ t("Docker Desktop ishga tushgach, BulutSkan’da «Vositalar va bazalar» sahifasini oching va «Qayta tekshirish» ni bosing.") }}</li>
+  </ol>
+  <p class="muted">{{ t("Docker’siz ham namoyish rejimi ishlaydi: III bob eksperimenti natijalari, konsensus, AHP va hisobotlar.") }}</p>
+</section>
+{% endblock %}

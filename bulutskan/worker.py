@@ -22,7 +22,7 @@ from bulutskan.scanner.docker import DockerClient
 from bulutskan.scanner.tools import IntegrityError
 from bulutskan.security.upload_guard import UploadRejected, stage_directory
 from bulutskan.security.workspace import Workspace, purge_stale
-from bulutskan.services import audit, jobs, retention
+from bulutskan.services import audit, jobs, retention, setup
 from bulutskan.services.pipeline import Scanner, ScanOutcome
 from bulutskan.storage.db import Database, utcnow
 from bulutskan.storage.repo import save_outcome
@@ -78,7 +78,14 @@ class Worker:
     # ------------------------------------------------------------ bitta vazifa
 
     def process_one(self) -> bool:
-        """Navbatdan bitta vazifani olib bajaradi; vazifa bo‘lmasa ``False``."""
+        """Navbatdan bitta vazifani olib bajaradi; vazifa bo‘lmasa ``False``.
+
+        Avval sozlash ustasining vazifalari, keyin tekshiruvlar.
+        """
+        task_id = setup.claim_task(self.db)
+        if task_id is not None:
+            setup.execute_task(self.db, task_id, self.settings, self.client_factory())
+            return True
         scan_id = jobs.claim_next(self.db, self.worker_id)
         if scan_id is None:
             return False

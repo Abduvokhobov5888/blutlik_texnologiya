@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Foydalanuvchilar") }}{% endblock %}
+{% block heading %}{{ t("Foydalanuvchilar") }}{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="small">{{ t("Akkauntlar faqat CLI orqali boshqariladi: «bulutskan user add NOM --role analyst|guest|admin», «user disable», «user passwd».") }}</p>
+  <table class="table small"><thead><tr><th>{{ t("Login") }}</th><th>{{ t("Rol") }}</th><th>{{ t("Holat") }}</th><th>{{ t("Yaratilgan") }}</th><th>{{ t("Oxirgi kirish") }}</th></tr></thead><tbody>
+  {% for u in users %}<tr><td>{{ u.username }}</td><td>{{ u.role }}</td><td>{% if u.is_active %}<span class="pill pill-ok">{{ t("faol") }}</span>{% else %}<span class="pill pill-red">{{ t("o‘chirilgan") }}</span>{% endif %}</td><td>{{ fmt_dt(u.created_at) }}</td><td>{{ fmt_dt(u.last_login_at) }}</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% set rows = recent if recent is defined else scans %}
+<table class="table">
+  <thead><tr><th>{{ t("Obyekt") }}</th><th>{{ t("Turi") }}</th><th>{{ t("Holat") }}</th><th>{{ t("Sana") }}</th><th>{{ t("Kritik") }}</th><th>{{ t("Yuqori") }}</th><th>{{ t("Tasdiqlangan") }}</th><th>Jaccard</th></tr></thead>
+  <tbody>
+  {% for sc in rows %}
+    {% set gbs = (sc.summary or {}).get("groups_by_severity", {}) %}
+    <tr>
+      <td><a href="/scans/{{ sc.uid }}">{{ sc.target }}</a>{% if sc.is_demo %} <span class="pill pill-demo">{{ t("namoyish") }}</span>{% endif %}{% if (sc.eol or {}).get("is_eol") %} <span class="pill pill-red">EOL</span>{% endif %}</td>
+      <td>{{ t("IaC") if sc.kind == "iac" else t("Obraz") }}</td>
+      <td><span class="status status-{{ sc.status }}">{{ t(status_uz.get(sc.status, sc.status)) }}</span></td>
+      <td class="nowrap">{{ fmt_dt(sc.created_at) }}</td>
+      <td><span class="sev sev-critical">{{ gbs.get("CRITICAL", 0) }}</span></td>
+      <td><span class="sev sev-high">{{ gbs.get("HIGH", 0) }}</span></td>
+      <td>{{ (sc.summary or {}).get("confirmed", "—") }}</td>
+      <td>{% if sc.jaccard %}{{ fmt_num(sc.jaccard.get("trivy|grype", sc.jaccard.get("all"))) }}{% else %}—{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8" class="muted">{{ t("Hali tekshiruv yo‘q") }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>

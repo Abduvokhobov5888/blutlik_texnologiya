@@ -71,12 +71,12 @@ def test_user_lifecycle(db) -> None:
         assert authenticate(s, "robiyaxon", PASSWORD) is not None
         assert authenticate(s, "robiyaxon", "noto‘g‘ri-parol-123") is None
         assert authenticate(s, "yoq", PASSWORD) is None
-        user = get_user(s, "robiyaxon")
-        assert user is not None
-        epoch = user.session_epoch
-        set_password(s, user, "Yangi-Kuchli-Parol-2027")
-        assert user.session_epoch == epoch + 1
-        disable_user(s, user)
+        found = get_user(s, "robiyaxon")
+        assert found is not None
+        epoch = found.session_epoch
+        set_password(s, found, "Yangi-Kuchli-Parol-2027")
+        assert found.session_epoch == epoch + 1
+        disable_user(s, found)
     with db.session() as s:
         assert authenticate(s, "robiyaxon", "Yangi-Kuchli-Parol-2027") is None  # o‘chirilgan
 

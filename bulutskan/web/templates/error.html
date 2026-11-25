@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}{{ code }}{% endblock %}
+{% block heading %}{{ t("Xato") }} {{ code }}{% endblock %}
+{% block content %}
+<div class="card"><p>{{ t(detail) if detail else t("Kutilmagan xato") }}</p><p><a class="btn" href="/">{{ t("Boshqaruv paneli") }}</a></p></div>
+{% endblock %}

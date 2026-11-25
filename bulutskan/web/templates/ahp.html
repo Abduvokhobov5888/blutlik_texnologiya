@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}AHP{% endblock %}
+{% block heading %}{{ t("Vosita tanlash (AHP)") }}{% endblock %}
+{% block content %}
+<section class="card">
+  <p>{{ t("Dissertatsiyaning II bobidagi model: yettita mezon, xos vektor usulida olingan vaznlar va 1–5 shkaladagi ballar. Vaznlarni o‘zgartiring — reyting darhol qayta hisoblanadi.") }}</p>
+  <div class="scenarios">{% for key, sc in scenarios.items() %}<a class="btn btn-sm{% if key == scenario %} btn-primary{% endif %}" href="/ahp?scenario={{ key }}">{{ t(sc.name_uz) }}</a>{% endfor %}</div>
+  {% if consistency %}<p class="small muted">λ<sub>max</sub> = {{ fmt_num(consistency.lambda_max) }} · CI = {{ fmt_num(consistency.ci, 4) }} · CR = {{ fmt_num(consistency.cr, 4) }} {% if consistency.acceptable %}<span class="pill pill-ok">CR &lt; 0,1</span>{% endif %}</p>{% endif %}
+</section>
+<section class="grid2">
+  <form class="card sliders" hx-post="/ahp/calc" hx-target="#ahp-result" hx-trigger="input changed delay:150ms from:input[type=range], load">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h3>{{ t("Mezonlar vaznlari") }}</h3>
+    {% for c in criteria %}
+    <label class="slider"><span><strong>{{ c.code }}</strong> {{ t(c.name_uz) }}</span>
+      <input type="range" min="0" max="1" step="0.005" name="w_{{ c.code }}" value="{{ '%.4f'|format(weights[loop.index0]) }}"></label>
+    {% endfor %}
+  </form>
+  <div id="ahp-result">{% include "partials/ahp_result.html" %}</div>
+</section>
+<section class="card"><h3>{{ t("Ballar jadvali (1–5)") }}</h3>
+  <table class="table small"><thead><tr><th>{{ t("Vosita") }}</th>{% for c in codes %}<th>{{ c }}</th>{% endfor %}</tr></thead><tbody>
+  {% for tool, row in scores.items() %}<tr><td>{{ tool }}</td>{% for v in row %}<td>{{ v|int }}</td>{% endfor %}</tr>{% endfor %}
+  </tbody></table></section>
+<section class="card"><h3>{{ t("Sezgirlik tahlili (bazaviy vaznlar, ×0,5 va ×1,5)") }}</h3>
+  <table class="table small"><thead><tr><th>{{ t("Mezon") }}</th><th>{{ t("Ko‘paytiruvchi") }}</th><th>{{ t("Yetakchi") }}</th><th>{{ t("Birinchi uchlik") }}</th><th>{{ t("Uchlik tarkibi o‘zgarmadi") }}</th></tr></thead><tbody>
+  {% for r in sens %}<tr><td>{{ r.criterion }}</td><td>×{{ fmt_num(r.factor, 1) }}</td><td>{{ r.leader }}</td><td>{{ r.top3|join(", ") }}</td><td>{% if r.same_top3 %}<span class="pill pill-ok">{{ t("ha") }}</span>{% else %}<span class="pill pill-warn">{{ t("yo‘q") }}</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></section>
+{% endblock %}

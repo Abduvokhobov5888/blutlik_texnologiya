@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Tekshiruvlar tarixi") }}{% endblock %}
+{% block heading %}{{ t("Tekshiruvlar tarixi") }}{% endblock %}
+{% block content %}
+<form class="filters card" method="get" action="/scans">
+  <label>{{ t("Turi") }}<select name="kind"><option value="">{{ t("Hammasi") }}</option><option value="iac" {% if kind == "iac" %}selected{% endif %}>IaC</option><option value="image" {% if kind == "image" %}selected{% endif %}>{{ t("Obraz") }}</option></select></label>
+  <label>{{ t("Manba") }}<select name="source"><option value="">{{ t("Hammasi") }}</option><option value="demo" {% if source == "demo" %}selected{% endif %}>{{ t("Namoyish") }}</option><option value="mine" {% if source == "mine" %}selected{% endif %}>{{ t("Meniki") }}</option></select></label>
+  <button class="btn" type="submit">{{ t("Filtrlash") }}</button>
+  <a class="btn btn-ghost" href="/compare">{{ t("Ikki tekshiruvni solishtirish") }}</a>
+</form>
+<section class="card">{% include "partials/scan_table.html" with context %}</section>
+{% endblock %}

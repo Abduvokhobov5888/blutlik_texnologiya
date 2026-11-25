@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Kirish") }}{% endblock %}
+{% block content %}
+<div class="auth-card card">
+  <div class="auth-brand"><img src="/static/img/favicon.svg" alt="" width="48" height="48"><div><h2>BulutSkan</h2><p class="muted">{{ t("Bulutli infratuzilma va konteyner obrazlari xavfsizligi") }}</p></div></div>
+  {% if first %}<div class="alert alert-ok">{{ t("Administrator yaratildi. Endi kiring.") }}</div>{% endif %}
+  {% if error %}<div class="alert alert-red">{{ t(error) }}</div>{% endif %}
+  <form method="post" action="/login" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ t("Login") }}<input name="username" autocomplete="username" required maxlength="64" autofocus></label>
+    <label>{{ t("Parol") }}<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+    <button class="btn btn-primary" type="submit">{{ t("Kirish") }}</button>
+  </form>
+  {% if settings.is_server %}<p class="muted small">{{ t("Akkauntni faqat administrator yaratadi.") }}</p>{% endif %}
+</div>
+{% endblock %}

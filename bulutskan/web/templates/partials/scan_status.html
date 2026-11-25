@@ -1,0 +1,5 @@
+<div class="card progress-card">
+  {% if scan.status == "queued" %}<p><span class="spinner"></span> {{ t("Navbatda") }}{% if position %}: {{ position }}-{{ t("o‘rin") }}{% endif %}</p>
+  {% else %}<p><span class="spinner"></span> {{ t("Tekshirilmoqda: skanerlar tarmoqsiz konteynerlarda ishlayapti…") }}</p>{% endif %}
+  <progress></progress>
+</div>

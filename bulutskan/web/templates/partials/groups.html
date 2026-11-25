@@ -1,0 +1,21 @@
+<p class="muted small">{{ t("Jami") }}: {{ total }}</p>
+<table class="table">
+  <thead><tr><th>{{ t("Daraja") }}</th><th>{{ t("Topilma") }}</th><th>{{ t("Paket yoki fayl") }}</th><th>{{ t("Vositalar") }}</th><th>{{ t("Belgi") }}</th><th>{{ t("Tuzatish") }}</th></tr></thead>
+  <tbody>
+  {% for g in groups %}
+  <tr>
+    <td><span class="sev sev-{{ sev_class[g.severity] }}"><svg class="ic-s"><use href="#i-sev"/></svg>{{ t(g.severity) }}</span></td>
+    <td>{% if scan.kind == "image" %}<strong class="mono">{{ g.key }}</strong><br><span class="small muted">{{ g.title[:140] if g.title != g.key else "" }}</span>{% else %}<strong>{{ g.category or "" }} {{ g.title[:120] }}</strong>{% if g.description %}<br><span class="small muted">{{ g.description }}</span>{% endif %}{% endif %}{% if g.known_exploited %} <span class="pill pill-red">KEV</span>{% endif %}</td>
+    <td class="small">{{ (g.targets or [])[:3]|join(", ") }}</td>
+    <td class="small">{{ g.tools.replace(",", ", ") }}</td>
+    <td><span class="pill {% if g.consensus == 'confirmed' %}pill-ok{% else %}pill-warn{% endif %}">{{ t(consensus_uz.get(g.consensus, g.consensus)) }}</span>{% if g.cpe_suspect %} <span class="pill pill-cpe">{{ t("CPE asosida, soxta bo‘lishi mumkin") }}</span>{% endif %}{% if g.uncategorized %} <span class="pill">{{ t("Toifalanmagan") }}</span>{% endif %}</td>
+    <td class="small">{{ (g.fixed_versions or [])[:2]|join(", ") or "—" }}</td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="muted">{{ t("Topilma yo‘q") }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% if pages > 1 %}
+<div class="pager">
+  {% for p in range(1, pages + 1) %}{% if p == page %}<span class="on">{{ p }}</span>{% elif p <= 3 or p > pages - 2 or (p - page)|abs <= 2 %}<a hx-get="/scans/{{ scan.uid }}/groups?page={{ p }}&consensus={{ filters.consensus }}&severity={{ filters.severity }}&cpe={{ filters.cpe }}&q={{ filters.q|urlencode }}" hx-target="#groups" href="#">{{ p }}</a>{% endif %}{% endfor %}
+</div>
+{% endif %}

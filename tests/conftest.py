@@ -113,3 +113,14 @@ def windows_file_semantics(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     from tests.winfs import install
 
     return install(monkeypatch, tmp_path)
+
+
+@pytest.fixture
+def db(settings):
+    """Har bir test uchun alohida SQLite bazasi."""
+    from bulutskan.storage.db import Database
+
+    database = Database(settings.db_path)
+    database.init_schema()
+    yield database
+    database.dispose()

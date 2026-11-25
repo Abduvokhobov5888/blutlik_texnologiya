@@ -50,7 +50,15 @@ from bulutskan.scanner.tools import (
 )
 from bulutskan.security.upload_guard import UploadRejected
 from bulutskan.security.validators import InvalidImageReference
+from bulutskan.security.passwords import WeakPassword
+from bulutskan.services import audit
+from bulutskan.services.demo import demo_available, import_demo
 from bulutskan.services.pipeline import Scanner, ScanOutcome, ScanStatus
+from bulutskan.services.users import UserError, add_user, disable_user, enable_user, get_user, set_password
+from bulutskan.storage.db import Database
+from bulutskan.storage.tables import User
+from bulutskan.worker import Worker
+from sqlalchemy import select
 
 EXIT_OK = 0
 EXIT_THRESHOLD = 1
@@ -92,6 +100,8 @@ app = typer.Typer(
 )
 tools_app = typer.Typer(help="Vositalar: digest tekshiruvi, yuklab olish, Checkov qulfi.", no_args_is_help=True)
 app.add_typer(tools_app, name="tools")
+user_app = typer.Typer(help="Akkauntlar: faqat administrator CLI orqali yaratadi.", no_args_is_help=True)
+app.add_typer(user_app, name="user")
 
 
 class FailOn(StrEnum):
@@ -421,6 +431,149 @@ def tools_build_checkov() -> None:
         _err(f"Yig‘ish bajarilmadi: {res.stderr_text.strip()[-800:]}")
         raise typer.Exit(EXIT_ERROR)
     _ok(f"Yig‘ildi: {registry.checkov_tag}. Endi bajaring: bulutskan tools lock-checkov")
+
+
+# ------------------------------------------------------------- baza
+
+
+def open_db(settings: Settings) -> Database:
+    """SQLite bazasini ochadi va jadvallarni yaratadi."""
+    db = Database(settings.db_path)
+    db.init_schema()
+    return db
+
+
+# ------------------------------------------------------------- user
+
+
+class Role(StrEnum):
+    admin = "admin"
+    analyst = "analyst"
+    guest = "guest"
+
+
+def _read_password(password_stdin: bool) -> str:
+    if password_stdin:
+        return sys.stdin.readline().rstrip("\r\n")
+    return str(typer.prompt("Parol", hide_input=True, confirmation_prompt="Parolni takrorlang"))
+
+
+@user_app.command("add")
+def user_add(
+    username: str = typer.Argument(..., help="Login (kichik lotin harflari)."),
+    role: Role = typer.Option(Role.analyst, "--role", help="admin, analyst yoki guest."),
+    password_stdin: bool = typer.Option(False, "--password-stdin", help="Parolni standart kirishdan o‘qish (avtomatlashtirish uchun)."),
+) -> None:
+    """Akkaunt yaratish. Parol ekranga chiqmaydi va bcrypt bilan xeshlanadi."""
+    settings = get_settings()
+    db = open_db(settings)
+    try:
+        with db.session() as s:
+            user = add_user(s, username, _read_password(password_stdin), role.value)
+            audit.record(s, "user_added", username="cli", target=user.username, detail={"role": user.role})
+    except (UserError, WeakPassword) as exc:
+        _err(str(exc))
+        raise typer.Exit(EXIT_ERROR) from exc
+    finally:
+        db.dispose()
+    _ok(f"Akkaunt yaratildi: {username.strip().lower()} ({role.value})")
+
+
+@user_app.command("list")
+def user_list() -> None:
+    """Akkauntlar ro‘yxati."""
+    settings = get_settings()
+    db = open_db(settings)
+    try:
+        with db.session() as s:
+            for u in s.scalars(select(User).order_by(User.username)):
+                state = "faol" if u.is_active else "o‘chirilgan"
+                last = u.last_login_at.strftime("%Y-%m-%d %H:%M") if u.last_login_at else "—"
+                typer.echo(f"{u.username:24} {u.role:8} {state:12} oxirgi kirish: {last}")
+    finally:
+        db.dispose()
+
+
+def _change_user(username: str, action: str) -> None:
+    settings = get_settings()
+    db = open_db(settings)
+    try:
+        with db.session() as s:
+            user = get_user(s, username)
+            if user is None:
+                _err(f"Foydalanuvchi topilmadi: {username}")
+                raise typer.Exit(EXIT_ERROR)
+            if action == "disable":
+                disable_user(s, user)
+                audit.record(s, "user_disabled", username="cli", target=user.username)
+            elif action == "enable":
+                enable_user(s, user)
+                audit.record(s, "user_enabled", username="cli", target=user.username)
+            else:
+                try:
+                    set_password(s, user, _read_password(action == "passwd-stdin"))
+                except WeakPassword as exc:
+                    _err(str(exc))
+                    raise typer.Exit(EXIT_ERROR) from exc
+                audit.record(s, "password_changed", username="cli", target=user.username)
+    finally:
+        db.dispose()
+    _ok("Bajarildi")
+
+
+@user_app.command("disable")
+def user_disable(username: str = typer.Argument(...)) -> None:
+    """Akkauntni o‘chirish (barcha sessiyalari darhol bekor bo‘ladi)."""
+    _change_user(username, "disable")
+
+
+@user_app.command("enable")
+def user_enable(username: str = typer.Argument(...)) -> None:
+    """O‘chirilgan akkauntni qayta yoqish."""
+    _change_user(username, "enable")
+
+
+@user_app.command("passwd")
+def user_passwd(
+    username: str = typer.Argument(...),
+    password_stdin: bool = typer.Option(False, "--password-stdin"),
+) -> None:
+    """Parolni almashtirish (eski sessiyalar bekor bo‘ladi)."""
+    _change_user(username, "passwd-stdin" if password_stdin else "passwd")
+
+
+# ------------------------------------------------------------- demo, worker
+
+
+@app.command("demo-import")
+def demo_import(force: bool = typer.Option(False, "--force", help="Mavjud namoyish ma’lumotlarini almashtirish.")) -> None:
+    """III bob natijalarini (15 obraz va IaC) Docker va internetsiz bazaga yozish."""
+    settings = get_settings()
+    db = open_db(settings)
+    try:
+        if not demo_available():
+            _err("Namoyish ma’lumotlari topilmadi (demo/sinov/natijalar)")
+            raise typer.Exit(EXIT_ERROR)
+        n = import_demo(db, force=force)
+    finally:
+        db.dispose()
+    _ok(f"Import qilindi: {n} ta tekshiruv" if n else "Namoyish ma’lumotlari allaqachon bor (--force bilan almashtirish mumkin)")
+
+
+@app.command("worker")
+def worker_cmd() -> None:
+    """Navbatdan tekshiruvlarni olib bajaruvchi jarayon (server rejimi)."""
+    import signal
+    import threading
+
+    settings = get_settings()
+    db = open_db(settings)
+    stop = threading.Event()
+    signal.signal(signal.SIGINT, lambda *_: stop.set())
+    signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    typer.echo(f"Worker ishga tushdi: {settings.effective_worker_slots} slot")
+    Worker(settings, db, client_factory=lambda: make_client(settings)).run_forever(stop)
+    db.dispose()
 
 
 def main() -> None:  # pragma: no cover

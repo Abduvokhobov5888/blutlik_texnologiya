@@ -227,13 +227,25 @@ class Scanner:
         outcome.finished_at = _now()
         return outcome
 
-    def scan_image(self, reference: str, source: str = "cli") -> ScanOutcome:
-        """Obraz nomi bo‘yicha: pull → save → Trivy, Grype."""
+    def scan_image(self, reference: str, source: str = "cli", ws: Workspace | None = None) -> ScanOutcome:
+        """Obraz nomi bo‘yicha: pull → save → Trivy, Grype.
+
+        ``ws`` berilsa (navbatdagi vazifa), shu katalog ishlatiladi va uni
+        chaqiruvchi o‘chiradi. Server rejimida tortib olingan obraz
+        tekshiruvdan keyin ``docker rmi`` bilan o‘chiriladi.
+        """
         ref = parse_image_reference(reference)
         integrity = self._require_integrity()
-        with Workspace(self.settings.workdir) as ws:
-            image = pull_and_save(self.client, self.settings, ws, ref)
-            return self._scan_image_input(ws, ref.raw, image, integrity, source)
+        try:
+            if ws is not None:
+                image = pull_and_save(self.client, self.settings, ws, ref)
+                return self._scan_image_input(ws, ref.raw, image, integrity, source)
+            with Workspace(self.settings.workdir) as own:
+                image = pull_and_save(self.client, self.settings, own, ref)
+                return self._scan_image_input(own, ref.raw, image, integrity, source)
+        finally:
+            if self.settings.is_server:
+                self.client.remove_image(ref.raw)
 
     def scan_image_tar(self, tar_path: Path, source: str = "cli", image_name: str | None = None) -> ScanOutcome:
         """Tayyor ``.tar`` arxivni tekshiradi (arxiv faqat o‘qish uchun ulanadi)."""

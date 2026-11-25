@@ -135,6 +135,8 @@ class FakeDocker:
         if cmd[:1] == ["save"]:
             make_docker_archive(Path(cmd[cmd.index("-o") + 1]))
             return self._ok(argv)
+        if cmd[:2] == ["image", "rm"]:
+            return self._ok(argv)
         if cmd[:1] in (["kill"], ["build"]):
             return self._ok(argv)
         if cmd[:1] == ["run"]:

@@ -8,6 +8,8 @@ orqali o‘qiladi.
 
 from __future__ import annotations
 
+import os
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,6 +19,33 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_ROOT = Path(__file__).resolve().parent
 RESOURCES = PACKAGE_ROOT / "resources"
+
+#: PyInstaller bilan yig‘ilgan dasturmi (Windows o‘rnatuvchisi).
+FROZEN = bool(getattr(sys, "frozen", False))
+
+
+def bundle_root() -> Path:
+    """Dastur bilan birga keladigan fayllar ildizi (PyInstaller’da ``_MEIPASS``)."""
+    if FROZEN:
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    return PROJECT_ROOT
+
+
+def demo_root() -> Path:
+    """Namoyish ma’lumotlari: III bob eksperimentining real hisobotlari."""
+    return bundle_root() / "demo" / "sinov"
+
+
+def default_data_dir() -> Path:
+    """Ish ma’lumotlari katalogi.
+
+    O‘rnatilgan dasturda: ``%LOCALAPPDATA%\\BulutSkan\\data`` (dastur papkasi
+    yangilanganda ma’lumotlar yo‘qolmaydi); manba koddan ishlaganda: ``./data``.
+    """
+    if FROZEN:
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return Path(base) / "BulutSkan" / "data"
+    return Path("./data")
 
 _MB = 1024 * 1024
 
@@ -31,11 +60,18 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    #: Ish rejimi: ``local`` (Windows, bitta foydalanuvchi) yoki ``server`` (VPS, HTTPS).
+    mode: str = "local"
     secret_key: SecretStr | None = None
+    #: Server rejimi: tashqi manzil (``https://...``).
+    public_url: str | None = None
+    #: Birinchi administrator (faqat serverdagi ``.env`` da).
+    admin_username: str | None = None
+    admin_password: SecretStr | None = None
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
     lang: str = "uz"
-    data_dir: Path = Path("./data")
+    data_dir: Path = Field(default_factory=default_data_dir)
 
     # Fayl yuklash limitlari
     max_upload_mb: int = Field(default=20, ge=1)
@@ -60,6 +96,28 @@ class Settings(BaseSettings):
     #: Trivy bazasini ulash usuli: ``readonly`` (sukut) yoki ``copy``.
     trivy_db_mode: str = "readonly"
 
+    # Navbat, kvota, saqlash muddati
+    worker_slots: int | None = Field(default=None, ge=1, le=8)
+    queue_max: int = Field(default=20, ge=1)
+    queue_per_user: int = Field(default=2, ge=1)
+    scan_min_interval_s: int = Field(default=30, ge=0)
+    quota_analyst: int = Field(default=20, ge=0)
+    quota_guest: int = Field(default=3, ge=0)
+    report_retention_days: int | None = Field(default=None, ge=0)
+    audit_retention_days: int = Field(default=365, ge=1)
+    login_attempts: int = Field(default=5, ge=1)
+    login_window_min: int = Field(default=15, ge=1)
+    rate_limit_per_min: int = Field(default=120, ge=1)
+    session_hours: int = Field(default=8, ge=1)
+    session_idle_min: int = Field(default=30, ge=1)
+
+    @field_validator("mode")
+    @classmethod
+    def _mode(cls, v: str) -> str:
+        if v not in {"local", "server"}:
+            raise ValueError("mode: local yoki server")
+        return v
+
     @field_validator("lang")
     @classmethod
     def _lang(cls, v: str) -> str:
@@ -74,7 +132,30 @@ class Settings(BaseSettings):
             raise ValueError("trivy_db_mode: readonly yoki copy")
         return v
 
+    # ------------------------------------------------------------- rejim
+
+    @property
+    def is_server(self) -> bool:
+        return self.mode == "server"
+
+    @property
+    def effective_worker_slots(self) -> int:
+        """Bir vaqtdagi tekshiruvlar: lokalda 1, serverda 2 (sozlanadi)."""
+        return self.worker_slots or (2 if self.is_server else 1)
+
+    @property
+    def effective_retention_days(self) -> int:
+        """Hisobotlar saqlanish muddati: serverda 30 kun, lokalda cheklanmagan (0)."""
+        if self.report_retention_days is not None:
+            return self.report_retention_days
+        return 30 if self.is_server else 0
+
     # ------------------------------------------------------------- yo‘llar
+
+    @property
+    def db_path(self) -> Path:
+        """SQLite bazasi: tarix, navbat, audit."""
+        return self.data_path / "bulutskan.db"
 
     @property
     def data_path(self) -> Path:

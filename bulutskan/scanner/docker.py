@@ -279,6 +279,11 @@ class DockerClient:
             self.kill(spec.name)
         return res
 
+    def remove_image(self, ref: str) -> None:
+        """Foydalanuvchi obrazini o‘chiradi (server rejimi; xatolar e’tiborsiz)."""
+        if ref and not ref.startswith("-"):
+            self._run(["image", "rm", ref], timeout=120)
+
     def kill(self, name: str) -> None:
         """Konteynerni to‘xtatadi (xatolar e’tiborsiz)."""
         if _CONTAINER_NAME.fullmatch(name):

@@ -141,7 +141,9 @@ BulutSkan/
 │   │   ├── retention.py         # 30 kunlik saqlash muddati, tozalash
 │   │   ├── audit.py             # audit jurnali
 │   │   ├── compare.py           # ikki tekshiruvni solishtirish
-│   │   └── demo.py              # demo-import
+│   │   ├── demo.py              # demo-import
+│   │   ├── setup.py             # birinchi sozlash ustasining qadamlari va jarayon ko‘rsatkichi (8-bosqich)
+│   │   └── bundle.py            # oflayn to‘plam: eksport va import (8-bosqich)
 │   ├── reporting/
 │   │   ├── docx_report.py
 │   │   └── json_export.py
@@ -152,6 +154,7 @@ BulutSkan/
 │   │   ├── ahp.json             # Sinov\ahp: matritsa A, xos vektor w
 │   │   ├── ahp_upd.json         # Sinov\ahp: ballar S2, sezgirlik natijalari
 │   │   ├── iac/                 # Sinov\iac: insecure va secure test fayllari
+│   │   ├── tool_image_ids.txt   # vositalar obraz ID lari: oflayn to‘plamni tekshirish uchun (8-bosqich)
 │   │   └── eol.json             # ichki EOL ro‘yxati
 │   └── web/
 │       ├── app.py               # FastAPI fabrikasi, middleware’lar
@@ -161,7 +164,7 @@ BulutSkan/
 │       ├── csrf.py
 │       ├── i18n.py
 │       ├── i18n/uz.json, en.json
-│       ├── routes/              # dashboard, iac, image, scans, compare, ahp, tools
+│       ├── routes/              # dashboard, iac, image, scans, compare, ahp, tools, setup, help, admin
 │       ├── templates/           # base.html, sahifalar, partials/
 │       └── static/              # css/, js/, icons/, vendor/ (htmx, Chart.js)
 ├── demo/sinov/
@@ -180,6 +183,7 @@ BulutSkan/
 ├── docs/
 │   ├── arxitektura.md
 │   ├── windows_sinov.md         # lokal rejimni haqiqiy Docker bilan sinash
+│   ├── docker_ornatish.md       # Docker Desktop’ni o‘rnatish (usta shu sahifaga havola beradi)
 │   └── serverga_joylash.md      # Ubuntu 24.04 serverni sozlash (8-bosqich)
 ├── pyproject.toml
 ├── requirements.txt
@@ -616,6 +620,21 @@ erDiagram
         bool cpe_suspect
         string fixed_version
     }
+    SETUP_TASK {
+        int id PK
+        string step "docker, tools, checkov, db, bundle"
+        string action "check, pull, build, lock, update, import, export"
+        string status "queued, running, done, failed"
+        int progress "0-100, aniq foiz yo‘q bo‘lsa -1"
+        string message "oxirgi xabar (o‘zbekcha)"
+        int user_id FK
+        datetime started_at
+        datetime finished_at
+    }
+    SETTING {
+        string key PK "setup_completed_at, demo_mode"
+        json value
+    }
     DB_UPDATE {
         int id PK
         string db_name "trivy, trivy-java, grype"
@@ -804,6 +823,8 @@ Menyu foydalanuvchi roliga qarab chiqadi (17.4-bo‘lim). Administrator uchun qo
 | `bulutskan user list` / `user disable` / `user passwd` | Akkauntlarni ko‘rish, o‘chirish, parolni almashtirish |
 | `bulutskan serve` | Veb-server. Lokal rejimda: 127.0.0.1:8000, worker ichida. Server rejimida: faqat veb, Docker’siz |
 | `bulutskan worker` | Server rejimi: navbatdan tekshiruvlarni olib bajaruvchi jarayon (2 slot), kunlik tozalash va baza yangilash |
+| `bulutskan setup` | Birinchi sozlash ustasining matnli varianti (18-bo‘lim, 8-bosqich) |
+| `bulutskan bundle export FAYL` / `bundle import FAYL` | Oflayn to‘plam: vosita obrazlari va bazalar bitta arxivda (ixtiyoriy, 8-bosqich) |
 
 Qo‘shimcha `scan` parametrlari: `--image-name` (`--image-tar` uchun obraz nomi, EOL tekshiruviga kerak), `--json natija.json`, `--unknown-severity`. `--docx` 5-bosqichda qo‘shiladi.
 
@@ -1086,7 +1107,124 @@ Repozitoriyga qo‘shiladigan fayllar:
 | 3 | 30 kundan keyin nima o‘chadi? | Hisobot fayllari va topilmalar. `SCAN` qatori (kim, qachon, nimani) audit uchun qoladi |
 | 4 | VPS diski | Kamida 40 GB: bazalar ~3–4 GB, vosita obrazlari ~2 GB, 2 parallel tekshiruv × (2 GB obraz + 2 GB `.tar`), Docker keshi |
 
-## 18. Qabul qilingan qarorlar
+## 18. Birinchi sozlash ustasi va oflayn to‘plam
+
+Platformani birinchi marta ochgan foydalanuvchi Docker, vosita obrazlari va bazalarni qo‘lda tekshirmasligi kerak. Buni “Birinchi sozlash” ustasi bajaradi. U ikkala rejimda ishlaydi: lokal rejimda — Docker Desktop, server rejimida — Docker Engine (faqat administrator uchun). Usta 8-bosqichda yoziladi va 4-bosqichdagi veb-interfeysga tayanadi.
+
+### 18.1. Qadamlar
+
+```mermaid
+flowchart TD
+    S([Birinchi ishga tushirish]) --> D{"1. Docker ishlayaptimi?"}
+    D -- "yo‘q" --> DM["O‘rnatish ko‘rsatmasi<br/>yoki namoyish rejimi"]
+    DM --> NR([Namoyish rejimi: faqat ko‘rish])
+    D -- "ha" --> T{"2. Vosita obrazlari<br/>va digestlar"}
+    T -- "yo‘q yoki mos emas" --> TP["Yuklab olish<br/>faqat digest bo‘yicha"] --> T
+    T -- "mos" --> C{"3. Checkov obrazi"}
+    C -- "yo‘q" --> CB["Yig‘ish va qulflash"] --> C
+    C -- "bor, qulflanmagan" --> CL["Qulflash"] --> C
+    C -- "qulflangan" --> B{"4. Zaifliklar bazalari"}
+    B -- "yo‘q yoki eski" --> BU["Yuklab olish"] --> B
+    B -- "bor" --> R([Tayyor: boshqaruv paneli])
+    O["Oflayn to‘plamni import qilish"] -.-> T
+    O -.-> B
+```
+
+Qadamlar tartib bilan bajariladi: keyingi qadam faqat oldingisi yashil bo‘lgandan keyin ochiladi. Masalan, Docker’siz obraz yuklab bo‘lmaydi, Trivy obrazisiz esa uning bazasini. Har bir qadam kartochkasida holat belgisi, o‘zbekcha xabar, amal tugmasi, jarayon ko‘rsatkichi va tafsilotlar (versiya, digest, sana) bo‘ladi.
+
+| № | Tekshiruv | Yashil | Qizil va amal |
+|---|---|---|---|
+| 1 | `docker version`: CLI bormi, server javob beryaptimi, konteynerlar turi `linux` mi, Docker’ga ajratilgan xotira | “Docker ishlayapti (27.3.1, Linux konteynerlari, 7,8 GB xotira)” | **CLI yo‘q:** “Docker Desktop topilmadi…” + **O‘rnatish ko‘rsatmasi** + **Namoyish rejimida davom etish**. **Server javob bermayapti:** “Docker Desktop o‘rnatilgan, lekin ishga tushirilmagan…” + **Qayta tekshirish** |
+| 2 | `verify_tools`: KICS, Trivy, Grype digestlari (11.4-bo‘lim) | “Uchala vosita digest bo‘yicha mos” | **Yo‘q:** **Yuklab olish** (`docker pull repo@sha256:…`). **Teg boshqa obrazga ko‘rsatmoqda:** ogohlantirish va yuklab olish, baribir faqat digest bo‘yicha |
+| 3 | Checkov: `diss-checkov:3.3.26` bormi, qulflanganmi, ichidagi versiya 3.3.26 mi | “Checkov qulflangan: sha256:…” | **Obraz yo‘q:** **Yig‘ish**, keyin avtomatik qulflash. **Bor, qulflanmagan:** **Qulflash** (versiyasi tarmoqsiz konteynerda tekshiriladi) |
+| 4 | `database_status`: Trivy, Trivy Java, Grype bazalari va sanalari | “Bazalar yangi: Trivy 2026-11-24, Grype 2026-11-24” | **Yo‘q:** **Yuklab olish**. **Eski** (sariq, 18.3-bo‘lim): **Yangilash** |
+
+Talabda yashil va qizil holat so‘ralgan. Ularga uchinchisi qo‘shildi: **sariq** — “ishlaydi, lekin e’tibor bering”. Masalan, baza eskirgan yoki Docker’ga 4 GB dan kam xotira ajratilgan. Holat faqat rang bilan emas, belgi (✓, ✗, !) va matn bilan ham ko‘rsatiladi: rangni ajrata olmaydigan foydalanuvchi ham tushunadi.
+
+Barcha qadamlar yashil bo‘lsa, usta sozlash tugaganini (`SETTING.setup_completed_at`) yozadi va boshqaruv paneliga o‘tadi. Usta keyinroq “Vositalar va bazalar” sahifasidan qayta ochiladi. Bu sahifa platforma sozlanmagan bo‘lsa, kirishdan keyin avtomatik ochiladi.
+
+### 18.2. Docker bo‘lmasa
+
+1-qadam qizil bo‘lsa, ikkita yo‘l taklif qilinadi:
+
+1. **O‘rnatish ko‘rsatmasi** — ilova ichidagi o‘zbekcha sahifa (`/help/docker`, matni `docs/docker_ornatish.md` da). Unda WSL 2 ni yoqish, Docker Desktop’ni rasmiy saytdan o‘rnatish, Docker Desktop’da proksini kiritish va kamida 4 GB xotira ajratish tushuntiriladi. Rasmiy hujjatga havola ham beriladi. Sahifa internetsiz ochiladi, havolaga esa foydalanuvchining o‘zi o‘tadi.
+2. **Namoyish rejimida davom etish** — `demo-import` bajariladi (Docker va internet kerak emas). Panel, tarix, eksperiment natijalari, konsensus va AHP to‘liq ishlaydi. Tekshiruv sahifalarida tushuntirish turadi: “Namoyish rejimi: Docker topilmagani uchun yangi tekshiruvlar o‘chirilgan”. Bu 11.4-bo‘limdagi “Docker ishlamayapti — faqat ko‘rish rejimi” qaroriga mos.
+
+Server rejimida 1-qadam qizil bo‘lsa, bu joylashtirish xatosi. Usta `docs/serverga_joylash.md` ga havola beradi.
+
+### 18.3. Jarayon ko‘rsatkichi
+
+Uzoq amallarni (yuklab olish, yig‘ish, bazalar) veb jarayoni emas, `worker` bajaradi. Server rejimida `web` Docker’ga kira olmaydi, shuning uchun 1-qadamdagi oddiy tekshiruv ham `worker` orqali o‘tadi. Veb `SETUP_TASK` jadvaliga vazifa qo‘shadi. Worker uning holati, foizi va oxirgi xabarini yangilab turadi. Sahifa HTMX bilan har soniyada ko‘rsatkichni yangilaydi. Ko‘rsatkich HTML `<progress>` elementi bo‘lib, yonida foiz yoki matn turadi.
+
+| Amal | Foiz qanday hisoblanadi |
+|---|---|
+| Obraz yuklab olish | `docker pull` chiqishidan: tugagan qatlamlar / jami qatlamlar (“KICS: 3/7 qatlam, 43%”) |
+| Checkov’ni yig‘ish | `docker build --progress=plain` chiqishidan: bajarilgan bosqich / jami bosqich, oxirgi `pip` qatori |
+| Bazalarni yuklab olish | Baza bo‘yicha 1/3, 2/3, 3/3. Har baza ichida aniq foiz yo‘q: o‘tgan vaqt va kesh katalogi hajmi ko‘rsatiladi (“Trivy Java bazasi: 312 MB, 01:45”) |
+| Oflayn to‘plam | Fayllar bo‘yicha va baytlar bo‘yicha |
+
+Vosita foizni bermaydigan joyda platforma uni to‘qib chiqarmaydi: aniq foiz o‘rniga harakatlanuvchi ko‘rsatkich va o‘tgan vaqt chiqadi.
+
+Bazalar sanasi ham tekshiriladi. Grype 5 kundan (120 soat) eski bazani qabul qilmaydi, shuning uchun 4 kundan eski baza sariq bo‘ladi. 5 kundan eskisi qizil: “Grype bazasi 6 kun oldin yig‘ilgan va tekshiruvda ishlamaydi. Yangilang”.
+
+**Internet kerak bo‘lgan amallar:** obraz yuklab olish, Checkov’ni yig‘ish, bazalar. `docker pull` proksini Docker Desktop sozlamasidan oladi, yig‘ish va bazalar esa uni `docker info` dan oladi (5.3-bo‘lim). Ulanish xatosi bo‘lsa, usta proksi sozlamasini tekshirishni maslahat beradi: Docker Desktop → Settings → Resources → Proxies.
+
+**Xavfsizlik.**
+- Ustaning amallari faqat administrator uchun, har bir POST CSRF token bilan himoyalangan.
+- Har amal audit jurnaliga yoziladi: `setup_pull`, `setup_build`, `setup_lock`, `setup_db_update`, `demo_mode_enabled`, `bundle_import`.
+- Obrazlar faqat digest bo‘yicha yuklanadi.
+- Checkov faqat platforma ichidagi `checkov.Dockerfile` dan, qat’iy argumentlar bilan yig‘iladi. Foydalanuvchi kiritgan qiymat buyruqqa tushmaydi.
+- Checkov’ning yangi yig‘ishlarida bazaviy obraz ham digest bilan qotiriladi: `python:3.12-slim@sha256:191083cd…`, `image_digests.txt` dan olinadi. Mavjud `diss-checkov:3.3.26` obrazi o‘zgarmaydi.
+
+CLI’da xuddi shu qadamlar `bulutskan setup` buyrug‘i bilan matnli ko‘rinishda bajariladi. U serverda SSH orqali va grafik interfeyssiz kompyuterlarda kerak bo‘ladi.
+
+### 18.4. Oflayn to‘plam (ixtiyoriy)
+
+Internetsiz kompyuterda vosita obrazlari va bazalarni yuklab bo‘lmaydi. Oflayn to‘plam ularni internetli kompyuterdan bitta arxivda olib o‘tadi.
+
+```text
+bulutskan bundle export D:\oflayn_toplam_2026-11-25.tar
+bulutskan bundle import E:\oflayn_toplam_2026-11-25.tar
+```
+
+Ustada ham shu amallar bor. Import 2-qadam va 4-qadamni birdaniga yashil qiladi.
+
+Arxiv tarkibi:
+
+| Fayl | Mazmuni |
+|---|---|
+| `manifest.json` | To‘plam versiyasi, yaratilgan vaqt (UTC), platforma versiyasi, protsessor arxitekturasi (`amd64`), Docker saqlash usuli, har bir vosita uchun `digest_ref` va obraz ID si, bazalar sanalari, har bir faylning SHA-256 qiymati |
+| `images/{trivy,grype,kics,checkov}.tar` | `docker save` natijasi |
+| `db/trivy.tar.gz`, `db/trivy-java.tar.gz`, `db/grype.tar.gz` | `data/db` dagi bazalar |
+
+Taxminiy hajm 2–3 GB. Arxivga foydalanuvchi ma’lumotlari kirmaydi: `bulutskan.db`, yuklamalar, hisobotlar va `.env` qo‘shilmaydi. Arxivda faqat ochiq vosita obrazlari va ochiq bazalar bor, shuning uchun u shifrlanmaydi. Uning yaxlitligi esa qat’iy tekshiriladi.
+
+**Import paytidagi tekshiruvlar:**
+1. Tashqi `.tar` ning yozuvlari faqat kutilgan nomlardan iborat bo‘lishi kerak, ochilmasdan oldin tekshiriladi (11.5-bo‘lim).
+2. Har bir faylning SHA-256 qiymati `manifest.json` bilan solishtiriladi. Import oxirida arxivning umumiy SHA-256 qiymati ekranga chiqadi: uni eksport qilgan kompyuterdagi qiymat bilan solishtirish mumkin.
+3. `docker load` dan keyin har bir registr vositasining **obraz ID si** (konfiguratsiya digesti) repozitoriydagi qotirilgan qiymat bilan solishtiriladi. Bu qiymat `resources/tool_image_ids.txt` da, bir marta haqiqiy kompyuterdan olinadi. Mos kelmasa, import to‘xtaydi va yuklangan obraz o‘chiriladi.
+4. Checkov mahalliy yig‘ilgan, shuning uchun uning ID si faqat to‘plamdan olinadi. U ekranda ko‘rsatiladi va foydalanuvchi tasdiqlagandan keyin qulflanadi (birinchi ishonch tamoyili, manba: `bundle`).
+5. Bazalar avval vaqtinchalik katalogga xavfsiz ochiladi (`tarfile` ning `data` filtri: yo‘l va havolalar tekshiriladi), keyin eski baza o‘rniga qo‘yiladi. Ayni paytda tekshiruv ishlayotgan bo‘lsa, import rad etiladi. Windows’da ochiq fayllarni almashtirib bo‘lmaydi (`WinError 32`).
+
+**Nega obraz ID si kerak.** 11.4-bo‘limdagi tekshiruv registr bergan manifest digestiga (`RepoDigests`) tayanadi. `docker load` esa bu yozuvni har doim ham qayta tiklamaydi. Shuning uchun yuklangan obraz uning mazmunidan olingan, repozitoriyda qotirilgan digest bilan tekshiriladi. Bu digestni Docker “obraz ID si” deb ko‘rsatadi. U nimadan olinishi Docker’ning saqlash usuliga bog‘liq:
+
+- **klassik image store:** ID — konfiguratsiya faylining sha256 qiymati;
+- **containerd image store** (Docker Desktop’ning yangi o‘rnatmalarida sukut bo‘yicha): ID — manifest yoki indeks digesti.
+
+Ikkala holatda ham ID obraz mazmunidan hisoblanadi va qalbakilashtirib bo‘lmaydi. Lekin turli saqlash usulida turli qiymat chiqadi. Shu sababli `tool_image_ids.txt` ga saqlash usulining turi bilan birga **haqiqiy kompyuterda o‘lchangan** qiymatlar yoziladi, `manifest.json` da ham saqlash usuli qayd etiladi. Aniq usul Windows’dagi sinovdan keyin, foydalanuvchi kompyuteridagi `docker info` natijasi bo‘yicha belgilanadi. Oflayn rejimda vositalar shu `sha256:{ID}` orqali chaqiriladi, shunda “faqat digest orqali” tamoyili saqlanadi.
+
+**Eski bazalar haqida.** Oflayn kompyuterdagi baza vaqt o‘tishi bilan eskiradi. Usta va har bir hisobot baza sanasini ko‘rsatadi. Grype’ning 5 kunlik chegarasidan o‘tgan bazani ishlatish uchun usta `BULUTSKAN_GRYPE_VALIDATE_AGE=false` sozlamasini aniq ogohlantirish bilan taklif qiladi: “Baza N kun eski, natijalar to‘liq bo‘lmaydi”. Bu ogohlantirish hisobotga ham yoziladi.
+
+### 18.5. Testlar (8-bosqich)
+
+Soxta docker (`tests/fakes.py`) bilan tekshiriladi:
+- har bir qadamning har bir holati: Docker CLI yo‘q, server o‘chiq, ishlayapti; obraz yo‘q va yuklab olinganidan keyin yashil; teg boshqa obrazga ko‘rsatgan holat; Checkov yo‘q → yig‘ish → qulflash; baza yo‘q, eski, yangi;
+- Docker bo‘lmaganda namoyish rejimiga o‘tish;
+- `docker pull` va `docker build` chiqishidan foiz hisoblash (yozib olingan namunalar asosida);
+- to‘plamni eksport va import qilish; buzilgan fayl (SHA-256), boshqa obraz ID si, xavfli yo‘lli arxiv va tekshiruv ishlayotgan paytdagi import rad etilishi;
+- barcha testlar Windows fayl qoidasi (`tests/winfs.py`) bilan.
+
+## 19. Qabul qilingan qarorlar
 
 | № | Masala | Qaror |
 |---|---|---|
@@ -1101,8 +1239,10 @@ Repozitoriyga qo‘shiladigan fayllar:
 | 9 | `--unknown-severity` | Sukut `medium`, faqat `--fail-on` qarorida (foydalanuvchi so‘ragan) |
 | 10 | Server rejimi | Lokal rejim saqlanadi. Server: Caddy + `web` + `worker`, rollar, kvotalar, audit, 30 kunlik saqlash (17-bo‘lim, foydalanuvchi so‘ragan) |
 | 11 | Navbat | SQLite (`SCAN` jadvali), Redis emas (17.3-bo‘lim) |
+| 12 | Birinchi sozlash ustasi | To‘rt qadam: Docker → vositalar → Checkov → bazalar. Uzoq amallarni worker bajaradi, holatlar yashil, sariq va qizil (18-bo‘lim, foydalanuvchi so‘ragan) |
+| 13 | Oflayn to‘plam | SHA-256 va repozitoriyda qotirilgan obraz ID lari bilan tekshiriladi, foydalanuvchi ma’lumotlari kirmaydi (18.4-bo‘lim) |
 
-## 19. Bosqichlar
+## 20. Bosqichlar
 
 | Bosqich | Natija |
 |---|---|
@@ -1113,4 +1253,4 @@ Repozitoriyga qo‘shiladigan fayllar:
 | 5 | DOCX hisobot, JSON eksport, CLI, CI namunalari |
 | 6 | O‘zbekcha README, LICENSE (MIT) |
 | 7 | `bulutskan demo-import`. Mehmon roli va panel unga tayanadi, shuning uchun 4-bosqich bilan birga yoziladi |
-| 8 | Serverga joylashtirish: `deploy/Dockerfile`, `deploy/Caddyfile`, `docker-compose.yml`, server `.env.example`, `docs/serverga_joylash.md` (Ubuntu 24.04, UFW, SSH kalit, yangilash, zaxira nusxa) |
+| 8 | Serverga joylashtirish: `deploy/Dockerfile`, `deploy/Caddyfile`, `docker-compose.yml`, server `.env.example`, `docs/serverga_joylash.md` (Ubuntu 24.04, UFW, SSH kalit, yangilash, zaxira nusxa). Birinchi sozlash ustasi (veb va `bulutskan setup`), `docs/docker_ornatish.md`. Ixtiyoriy: oflayn to‘plam (`bundle export/import`) |

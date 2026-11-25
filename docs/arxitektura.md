@@ -1,6 +1,7 @@
 # BulutSkan arxitekturasi
 
 > **Holat:** 3-bosqich bajarildi: xavfsiz skaner moduli, digest tekshiruvi, bazalarni yangilash, fayl yuklash himoyasi, tekshiruv quvuri va CLI ning asosiy buyruqlari. Haqiqiy Docker bilan sinov ko‘rsatmasi: [windows_sinov.md](windows_sinov.md).
+> **Reja o‘zgarishi:** lokal rejimdan tashqari server rejimi qo‘shildi: internetdagi VPS, HTTPS, rollar, kvotalar, alohida `worker` (17-bo‘lim). Veb qismi 4-bosqichda ikkala rejimni hisobga olib quriladi, serverga joylashtirish alohida 8-bosqich.
 > 1-bosqichda ⚠ bilan belgilangan joylar `Sinov` materiallari (`analyze.py`, `stats3.py`, `ground_truth.csv`, `run_tests.ps1`, `tool_digests.txt`, `ahp/`) asosida aniqlashtirildi.
 
 BulutSkan — bulutli infratuzilma kodini (IaC) va konteyner obrazlarini bir nechta ochiq kodli skaner bilan tekshiradigan mahalliy veb-platforma. U Andijon davlat universiteti magistranti Odilova Robiyaxonning “Bulutli hisoblash texnologiyalari xavfsizligini ta’minlovchi dasturiy vositalarni qiyosiy tahlil qilish va ochiq kodli vositalar samaradorligini baholash” mavzusidagi dissertatsiyasining amaliy natijasidir.
@@ -13,7 +14,7 @@ Platformaning har bir qismi dissertatsiya xulosalaridan kelib chiqadigan beshta 
 2. **Skaner — ishonchsiz kod.** Har bir vosita alohida, tarmoqsiz, imtiyozsiz va resurslari cheklangan konteynerda ishlaydi.
 3. **Ta’minot zanjiri qotiriladi.** Vositalar teg orqali emas, faqat sha256 digest orqali chaqiriladi. Digest mos kelmasa, tekshiruv boshlanmaydi.
 4. **Internet faqat bitta bosqichda kerak.** Zaifliklar bazalari alohida “bazalarni yangilash” amali bilan yuklanadi. Tekshiruvning o‘zi internetsiz bajariladi.
-5. **Ma’lumotlar mahalliy qoladi.** Telemetriya, tashqi CDN va tashqi API yo‘q. Ilova sukut bo‘yicha faqat `127.0.0.1` manzilida tinglaydi.
+5. **Ma’lumotlar mahalliy qoladi.** Telemetriya, tashqi CDN va tashqi API yo‘q. Lokal rejimda ilova faqat `127.0.0.1` manzilida tinglaydi. Server rejimida u O‘zbekistondagi VPS’da faqat HTTPS orqali (Caddy) ochiq bo‘ladi, foydalanuvchi ma’lumotlari serverdan chiqmaydi (17-bo‘lim).
 
 ## 2. Umumiy ko‘rinish
 
@@ -61,6 +62,8 @@ flowchart LR
 
 Veb-interfeys va CLI bir xil `services.pipeline` quvurini chaqiradi. Shu sababli brauzer va CI/CD bir xil natija beradi.
 
+Diagramma lokal rejimni ko‘rsatadi: veb va skaner bitta kompyuterda. Server rejimida veb va skanerlarni ishga tushiruvchi `worker` alohida jarayonlar. Ular faqat SQLite navbati orqali gaplashadi va Docker’ga faqat `worker` kiradi (17.2-bo‘lim).
+
 ## 3. Modullar
 
 | Modul | Vazifasi | Bosqich |
@@ -100,7 +103,8 @@ BulutSkan/
 │   ├── __init__.py              # versiya
 │   ├── __main__.py              # python -m bulutskan
 │   ├── config.py                # Settings (.env)
-│   ├── cli.py                   # Typer: scan, db-update, tools, demo-import, user, serve
+│   ├── cli.py                   # Typer: scan, db-update, tools, demo-import, user, serve, worker
+│   ├── worker.py                # navbatdan vazifa oluvchi jarayon (server rejimi)
 │   ├── core/
 │   │   ├── models.py            # Finding, Severity, FindingStatus, ToolReport, ScanResult
 │   │   ├── normalize.py         # jiddiylik, holat, CVE normallashtirish
@@ -132,7 +136,10 @@ BulutSkan/
 │   │   └── repo.py              # saqlash va o‘qish
 │   ├── services/
 │   │   ├── pipeline.py          # parse → dedup → konsensus → EOL → saqlash
-│   │   ├── jobs.py              # fon navbati
+│   │   ├── jobs.py              # SQLite navbati: vazifa qo‘shish, atomar olish, yurak urishi
+│   │   ├── quota.py             # kunlik kvota, tekshiruv oralig‘i, navbat limiti
+│   │   ├── retention.py         # 30 kunlik saqlash muddati, tozalash
+│   │   ├── audit.py             # audit jurnali
 │   │   ├── compare.py           # ikki tekshiruvni solishtirish
 │   │   └── demo.py              # demo-import
 │   ├── reporting/
@@ -148,7 +155,9 @@ BulutSkan/
 │   │   └── eol.json             # ichki EOL ro‘yxati
 │   └── web/
 │       ├── app.py               # FastAPI fabrikasi, middleware’lar
-│       ├── auth.py              # login, sessiya, urinishlar cheklovi
+│       ├── auth.py              # login, sessiya, rollar, urinishlar cheklovi
+│       ├── ratelimit.py         # so‘rovlar tezligi cheklovi
+│       ├── headers.py           # CSP, HSTS va boshqa xavfsizlik sarlavhalari
 │       ├── csrf.py
 │       ├── i18n.py
 │       ├── i18n/uz.json, en.json
@@ -165,11 +174,17 @@ BulutSkan/
 ├── ci/
 │   ├── github-actions.yml       # namuna
 │   └── gitlab-ci.yml            # namuna
-├── docs/arxitektura.md
+├── deploy/
+│   ├── Dockerfile               # web va worker nishonlari (8-bosqich)
+│   └── Caddyfile                # HTTPS, Let’s Encrypt (8-bosqich)
+├── docs/
+│   ├── arxitektura.md
+│   ├── windows_sinov.md         # lokal rejimni haqiqiy Docker bilan sinash
+│   └── serverga_joylash.md      # Ubuntu 24.04 serverni sozlash (8-bosqich)
 ├── pyproject.toml
 ├── requirements.txt
-├── run.ps1
-├── docker-compose.yml           # ixtiyoriy
+├── run.ps1                      # lokal rejim (Windows)
+├── docker-compose.yml           # server rejimi: caddy, web, worker (8-bosqich)
 ├── .env.example
 ├── .gitignore
 ├── LICENSE                      # MIT
@@ -521,7 +536,9 @@ erDiagram
         int id PK
         string username UK
         string password_hash "bcrypt"
+        string role "admin, analyst, guest"
         bool is_active
+        int session_epoch "oshirilsa eski sessiyalar bekor"
         datetime created_at
         datetime last_login_at
     }
@@ -531,10 +548,17 @@ erDiagram
         string kind "iac yoki image"
         string target "obraz nomi yoki fayllar"
         string source "web, cli, demo"
-        string status "navbatda, ishlamoqda, tugadi, qisman, xato"
+        string status "queued, running, done, partial, failed"
         int user_id FK
+        bool is_demo
+        json request "navbat uchun: fayllar yoki obraz nomi, parametrlar"
+        string worker_id
+        int attempts
         datetime created_at
+        datetime started_at
+        datetime heartbeat_at
         datetime finished_at
+        datetime purged_at "30 kundan keyin tafsilotlar o‘chirilgan"
         string image_digest
         string os_name
         json summary "jiddiylik bo‘yicha sonlar"
@@ -606,9 +630,13 @@ erDiagram
         int id PK
         datetime ts
         int user_id FK
-        string action "login, scan, db-update"
-        string detail
+        string username
+        string role
         string ip
+        string action "login_ok, scan_submitted, ..."
+        string target
+        string result "ok, denied, failed"
+        json detail
     }
 ```
 
@@ -616,7 +644,12 @@ Xom JSON hisobotlar bazaga emas, `data/hisobotlar/{scan_uid}/` katalogiga yozila
 
 ### 10.1. Fon navbati
 
-Veb-so‘rov skanerni kutmaydi. Tekshiruv `ThreadPoolExecutor(max_workers=1)` asosidagi oddiy navbatga qo‘yiladi va holati bazada saqlanadi. Natijalar sahifasi holatni HTMX bilan har 2 soniyada so‘raydi. Server qayta ishga tushganda “navbatda” va “ishlamoqda” holatidagi tekshiruvlar “xato” deb yopiladi, eski `workdir` kataloglari tozalanadi.
+Veb-so‘rov skanerni kutmaydi. Navbat — `SCAN` jadvalining o‘zi: veb `queued` holatidagi yozuv qo‘shadi, worker uni atomar `UPDATE … RETURNING` bilan oladi (17.3-bo‘lim). Natijalar sahifasi holatni HTMX bilan har 2 soniyada so‘raydi.
+
+- **Lokal rejim:** worker `bulutskan serve` jarayoni ichidagi bitta oqim (slot).
+- **Server rejimi:** worker alohida `bulutskan worker` jarayoni, 2 ta slot.
+
+Worker qayta ishga tushganda yurak urishi to‘xtagan `running` vazifalar bir marta navbatga qaytariladi, eski `workdir` kataloglari tozalanadi (`purge_stale`). SQLite WAL rejimida va `busy_timeout` bilan ochiladi.
 
 ## 11. Xavfsizlik arxitekturasi
 
@@ -638,6 +671,12 @@ Veb-so‘rov skanerni kutmaydi. Tekshiruv `ThreadPoolExecutor(max_workers=1)` as
 | Tarmoqdan ruxsatsiz kirish | Sukut bo‘yicha `127.0.0.1`, boshqa manzil tanlansa ogohlantirish | `config`, `cli serve` |
 | Ma’lumot O‘zbekistondan chiqishi | Tashqi CDN, shrift va telemetriya yo‘q, barcha JS/CSS `static/vendor` da | `web.static` |
 | Proksi manzili oshkor bo‘lishi | Faqat xotirada, jurnalda yashiriladi, commit qilinmaydi | `scanner.dbupdate` |
+| **Server rejimi:** parolni tanlab topish | Login va IP bo‘yicha cheklov, bcrypt, vaqtincha blok, audit | `web.auth`, `web.ratelimit` |
+| **Server rejimi:** tekshiruvlar bilan resurslarni tugatish (DoS) | Kunlik kvota, tekshiruv oralig‘i, navbat limiti, 2 slot, konteyner limitlari, 2 GB obraz limiti, bo‘sh disk tekshiruvi | `services.quota`, `worker` |
+| **Server rejimi:** obraz nomi orqali ichki tarmoqqa murojaat (SSRF) | Registrlar oq ro‘yxati; IP, `localhost` va ichki nomlar rad etiladi | `security.validators` |
+| **Server rejimi:** veb ilova buzilsa, Docker orqali xostni egallash | `web` da Docker socket va CLI yo‘q; Docker’ga faqat tarmoqsiz, cheklangan `worker` kiradi | `deploy`, `worker` |
+| **Server rejimi:** sessiyani o‘g‘irlash | `Secure`, `HttpOnly`, `SameSite=Strict`, HSTS, qisqa muddat, `session_epoch` | `web.auth`, `web.headers` |
+| **Server rejimi:** foydalanuvchi ma’lumotlari uzoq saqlanishi | Yuklamalar darhol, hisobotlar 30 kunda o‘chiriladi | `services.retention` |
 
 ### 11.2. Skaner konteynerini ishga tushirish shabloni
 
@@ -743,7 +782,9 @@ Boshqaruv paneli: jami tekshiruvlar, kritik topilmalar, tasdiqlangan topilmalar 
 
 Tillar: o‘zbek (lotin, asosiy) va ingliz. Matnlar `web/i18n/uz.json` va `en.json` da, tanlangan til cookie’da saqlanadi.
 
-Cookie: `HttpOnly`, `SameSite=Strict`, imzo kaliti `.env` dagi `BULUTSKAN_SECRET_KEY`. Birinchi foydalanuvchi `bulutskan user create` buyrug‘i bilan yaratiladi. `run.ps1` foydalanuvchi yo‘qligini ko‘rsa, buni o‘zi taklif qiladi.
+Cookie: `HttpOnly`, `SameSite=Strict`, server rejimida `Secure`. Imzo kaliti `.env` dagi `BULUTSKAN_SECRET_KEY`. Ro‘yxatdan o‘tish sahifasi yo‘q: akkauntlar `bulutskan user add` bilan yaratiladi. Lokal rejimda `run.ps1` foydalanuvchi yo‘qligini ko‘rsa, buni o‘zi taklif qiladi.
+
+Menyu foydalanuvchi roliga qarab chiqadi (17.4-bo‘lim). Administrator uchun qo‘shimcha sahifalar: `GET /admin/audit` (audit jurnali, filtr, CSV) va `GET /admin/users` (faqat ko‘rish, akkauntlar CLI’da boshqariladi). Tekshiruv sahifalarida foydalanuvchining qolgan kunlik kvotasi va navbatdagi o‘rni ko‘rsatiladi.
 
 ## 13. CLI
 
@@ -759,8 +800,10 @@ Cookie: `HttpOnly`, `SameSite=Strict`, imzo kaliti `.env` dagi `BULUTSKAN_SECRET
 | `bulutskan tools lock-checkov` | Mahalliy Checkov obrazi ID sini qulflash |
 | `bulutskan tools build-checkov` | Checkov’ni `checkov.Dockerfile` dan yig‘ish |
 | `bulutskan demo-import` | Namoyish ma’lumotlarini import qilish (Docker va internetsiz) |
-| `bulutskan user create` | Foydalanuvchi yaratish |
-| `bulutskan serve` | Veb-serverni ishga tushirish (sukut: 127.0.0.1:8000) |
+| `bulutskan user add NOM --role admin\|analyst\|guest` | Akkaunt yaratish (faqat administrator, parol so‘raladi) |
+| `bulutskan user list` / `user disable` / `user passwd` | Akkauntlarni ko‘rish, o‘chirish, parolni almashtirish |
+| `bulutskan serve` | Veb-server. Lokal rejimda: 127.0.0.1:8000, worker ichida. Server rejimida: faqat veb, Docker’siz |
+| `bulutskan worker` | Server rejimi: navbatdan tekshiruvlarni olib bajaruvchi jarayon (2 slot), kunlik tozalash va baza yangilash |
 
 Qo‘shimcha `scan` parametrlari: `--image-name` (`--image-tar` uchun obraz nomi, EOL tekshiruviga kerak), `--json natija.json`, `--unknown-severity`. `--docx` 5-bosqichda qo‘shiladi.
 
@@ -826,8 +869,224 @@ Platforma Windows’da ishlatiladi, bulutli testlar esa Linux’da o‘tadi. Lin
 | Hisobot | python-docx |
 | Testlar | pytest, httpx |
 | Skanerlar | Trivy 0.76.1, Grype v0.121.0, KICS v2.2.0, Checkov 3.3.26 (digest bo‘yicha) |
+| Server rejimi | Ubuntu 24.04, Docker Engine va Compose, Caddy 2 (teskari proksi, Let’s Encrypt, digest bilan qotirilgan), UFW |
 
-## 17. Qabul qilingan qarorlar
+## 17. Ish rejimlari: lokal va server
+
+Platforma bitta kod bazasidan ikki rejimda ishlaydi. Rejim `BULUTSKAN_MODE` sozlamasi bilan tanlanadi (`local` yoki `server`). Lokal rejim — dastlabki talab: Windows kompyuter, bitta foydalanuvchi, `127.0.0.1`. U o‘zgarishsiz qoladi. Server rejimi magistrlik himoyasi uchun qo‘shildi: komissiya platformani havola orqali ochadi.
+
+### 17.1. Rejimlarni taqqoslash
+
+| Xususiyat | Lokal (`local`) | Server (`server`) |
+|---|---|---|
+| Joy | Windows 11 kompyuter | O‘zbekistondagi VPS: Ubuntu 24.04, 4 vCPU, 8 GB RAM |
+| Manzil | `http://127.0.0.1:8000` | `https://{domen}`, Caddy va Let’s Encrypt |
+| Jarayonlar | Bitta: veb va ichki worker (1 slot) | Alohida konteynerlar: `caddy`, `web`, `worker` |
+| Docker’ga kirish | Veb jarayoni (o‘z kompyuteri, bitta foydalanuvchi) | Faqat `worker`. `web` konteynerida Docker socket ham, Docker CLI ham yo‘q |
+| Navbat | SQLite | SQLite. `web` va `worker` faqat shu orqali aloqa qiladi |
+| Bir vaqtdagi tekshiruvlar | 1 | ko‘pi bilan 2 |
+| Akkauntlar | `bulutskan user add` | Faqat administrator, `bulutskan user add`. Ro‘yxatdan o‘tish sahifasi yo‘q |
+| Rollar | `admin` | `admin`, `analyst` (tahlilchi), `guest` (mehmon) |
+| Tezlik cheklovi va kvota | Faqat kirish urinishlari | Kirish, so‘rovlar, tekshiruv yuborish, kunlik kvota (17.5-bo‘lim) |
+| Obraz hajmi limiti | 4 GB | 2 GB |
+| Cookie | `HttpOnly`, `SameSite=Strict` | Yana `Secure` |
+| HSTS | Yo‘q (HTTP) | Bor |
+| Hisobotlar saqlanishi | Cheklanmagan | 30 kun |
+| Tortib olingan obraz | Docker keshida qoladi | Tekshiruvdan keyin `docker rmi` bilan o‘chiriladi |
+| Bazalarni yangilash | Qo‘lda: `bulutskan db-update` | `worker` kuniga bir marta avtomatik; administrator qo‘lda ham yangilay oladi |
+
+**“Ma’lumotlar O‘zbekiston hududidan chiqmaydi” yozuvi server rejimida ham to‘g‘ri qoladi.** Yuklangan fayllar, hisobotlar, akkauntlar va jurnallar VPS’dan chiqmaydi. Serverdan tashqariga faqat uch turdagi so‘rov ketadi, ularning hech birida foydalanuvchi ma’lumoti yo‘q:
+1. Let’s Encrypt — sertifikat olish uchun faqat domen nomi;
+2. konteyner registrlari — `docker pull` uchun obraz nomi;
+3. Trivy va Grype bazalari manbalari — bazalarni yuklab olish.
+
+### 17.2. Server rejimining tuzilmasi
+
+```mermaid
+flowchart LR
+    U["Brauzer"] -- "HTTPS 443" --> FW
+    subgraph VPS["VPS: Ubuntu 24.04, O‘zbekiston"]
+        FW["UFW: faqat 22, 80, 443"] --> C["caddy<br/>TLS, Let’s Encrypt"]
+        C -- "ichki tarmoq, 8000" --> W["web<br/>FastAPI, Docker’siz"]
+        W --> DB[("SQLite<br/>tarix, navbat, audit")]
+        W --> F[("data/<br/>yuklamalar, hisobotlar")]
+        K["worker<br/>tarmoqsiz, navbatdan oladi"] --> DB
+        K --> F
+        K -- "docker.sock" --> D["Docker Engine"]
+        D --> S["Skaner konteynerlari<br/>--network none"]
+    end
+    D -- "pull, bazalar" --> R["Registrlar va baza manbalari"]
+```
+
+Faqat `caddy` 80 va 443 portlarini ochadi. `web` faqat ichki Docker tarmog‘ida tinglaydi va tashqariga ochilmaydi. `worker` umuman tarmoqsiz (`network_mode: none`): u Docker Engine bilan unix socket orqali, `web` bilan esa SQLite fayli orqali gaplashadi.
+
+### 17.3. `web` va `worker` ajratilishi
+
+**`web`** so‘rovni qabul qiladi, foydalanuvchini va kvotani tekshiradi. Yuklangan fayllarni `security.upload_guard` bilan tekshiradi va ochadi: zip-slip, hajm, oq ro‘yxat, `.tar` tuzilmasi. Xato yuklama shu zahoti rad etiladi. So‘ng `SCAN` jadvaliga `queued` holatidagi yozuv qo‘shadi. `web` skaner modullarini (`bulutskan.scanner.docker`) import qilmaydi. Bu test bilan tekshiriladi, `web` obrazida esa Docker CLI o‘rnatilmagan.
+
+**`worker`** (`bulutskan worker`) navbatdan vazifani atomar oladi:
+
+```sql
+UPDATE scans SET status = 'running', worker_id = ?, started_at = ?, heartbeat_at = ?
+WHERE id = (SELECT id FROM scans WHERE status = 'queued' ORDER BY created_at LIMIT 1)
+RETURNING id, uid;
+```
+
+Keyin 3-bosqichdagi quvurni bajaradi, natijani bazaga yozadi, yuklangan fayllar va `.tar` arxivini o‘chiradi. Slotlar soni `BULUTSKAN_WORKER_SLOTS=2`. Har slot 15 soniyada `heartbeat_at` ni yangilaydi. `worker` qayta ishga tushsa, yurak urishi to‘xtab qolgan `running` vazifalar bir marta navbatga qaytariladi, ikkinchi marta esa `failed` deb yopiladi.
+
+**Nega Redis emas, SQLite.** Yuklama kichik: bir vaqtda ko‘pi bilan 2 ta tekshiruv. SQLite tarix bazasi bilan bir fayl: alohida xizmat kerak emas, zaxira nusxa — bitta fayl. Ikki konteyner bir xil faylni umumiy katalog orqali ochadi. WAL rejimi va `busy_timeout` bir xostdagi bir nechta jarayon uchun yetarli.
+
+**Bir xil yo‘l bilan ulash.** `worker` Docker Engine’ga xost yo‘llarini beradi (`--mount source=...`). Shu sababli `data/` katalogi xostda va ikkala konteynerda **bir xil yo‘l** bilan ulanadi: `/srv/bulutskan/data`, `BULUTSKAN_DATA_DIR=/srv/bulutskan/data`.
+
+**`docker.sock` xavfi.** Docker socket’iga kirish amalda xostda root huquqiga teng. Shuning uchun `worker` konteyneri qattiq cheklanadi:
+- `network_mode: none`;
+- `read_only: true`;
+- `cap_drop: [ALL]`, `no-new-privileges`;
+- root bo‘lmagan foydalanuvchi, faqat `docker` guruhi orqali kirish;
+- tashqaridan keladigan ma’lumotni deyarli qayta ishlamaydi: ZIP va `.tar` ni `web` tekshirib bo‘lgan.
+
+Undan kuchliroq variant — rootless Docker (17.10-bo‘lim, 1-savol).
+
+### 17.4. Rollar va huquqlar
+
+| Amal | `admin` | `analyst` | `guest` (mehmon) |
+|---|---|---|---|
+| Panel va tarix | Barcha tekshiruvlar | O‘zinikilari va namoyish | Namoyish va o‘zinikilari |
+| AHP sahifasi | ✓ | ✓ | ✓ |
+| IaC: fayl yoki ZIP yuklash | ✓ | ✓ | ✗ — faqat namoyish fayllari (`resources/iac`) |
+| Obraz: ixtiyoriy nom | ✓ | ✓ | ✗ — faqat eksperimentdagi 15 obraz ro‘yxatidan |
+| Obraz: `.tar` yuklash | ✓ | ✓ | ✗ |
+| Kunlik kvota | Cheklanmagan | 20 | 3 |
+| Eksport (JSON, DOCX) | ✓ | O‘z tekshiruvlari va namoyish | Namoyish va o‘zinikilari |
+| Bazalarni yangilash | ✓ | ✗ | ✗ |
+| Audit jurnali | ✓ | ✗ | ✗ |
+| Akkauntlar | Faqat CLI orqali | ✗ | ✗ |
+
+Akkauntlarni faqat administrator serverda CLI orqali yaratadi:
+
+```bash
+docker compose exec worker bulutskan user add robiyaxon --role analyst
+docker compose exec worker bulutskan user add mehmon --role guest
+docker compose exec worker bulutskan user list
+docker compose exec worker bulutskan user disable mehmon
+docker compose exec worker bulutskan user passwd robiyaxon
+```
+
+Parol ikki marta so‘raladi va ekranga chiqmaydi; uzunligi kamida 12 belgi, bcrypt bilan xeshlanadi. Birinchi administrator `.env` dagi `BULUTSKAN_ADMIN_USERNAME` va `BULUTSKAN_ADMIN_PASSWORD` dan birinchi ishga tushishda bir marta yaratiladi. Bazaga faqat bcrypt xeshi yoziladi. `.env` dagi parol keyin o‘zgartirilsa, bazadagi parol o‘zgarmaydi: uni `user passwd` almashtiradi.
+
+### 17.5. Cheklovlar
+
+| Cheklov | Sukut qiymati | Sozlama |
+|---|---|---|
+| Kirish urinishlari | Login va IP bo‘yicha 15 daqiqada 5 ta, keyin 15 daqiqa blok | `BULUTSKAN_LOGIN_ATTEMPTS`, `BULUTSKAN_LOGIN_WINDOW_MIN` |
+| Umumiy so‘rovlar | IP bo‘yicha daqiqasiga 120 ta | `BULUTSKAN_RATE_LIMIT_PER_MIN` |
+| Tekshiruv yuborish | Foydalanuvchi bo‘yicha 30 soniyada 1 ta | `BULUTSKAN_SCAN_MIN_INTERVAL_S` |
+| Kunlik kvota | `analyst` 20, `guest` 3, `admin` cheklanmagan | `BULUTSKAN_QUOTA_ANALYST`, `BULUTSKAN_QUOTA_GUEST` |
+| Navbat | Bir vaqtda 2 ta ishlaydi. Navbatda jami ko‘pi bilan 20 ta, bitta foydalanuvchidan 2 ta | `BULUTSKAN_WORKER_SLOTS`, `BULUTSKAN_QUEUE_MAX`, `BULUTSKAN_QUEUE_PER_USER` |
+| Obraz hajmi | 2 GB: yuklangan `.tar` (oqim bo‘yicha sanaladi) va tortib olingan obraz (`docker image inspect` → `Size`) | `BULUTSKAN_MAX_IMAGE_TAR_MB=2048` |
+| Bo‘sh disk | `docker pull` dan oldin kamida 10 GB | `BULUTSKAN_MIN_FREE_DISK_GB` |
+| Skaner konteyneri | 1,5 CPU va 2 GB xotira: 2 slot × 2 GB = 4 GB, qolgani tizim, `web` va `caddy` uchun | `BULUTSKAN_CONTAINER_CPUS`, `BULUTSKAN_CONTAINER_MEMORY` |
+| Registrlar | `docker.io`, `ghcr.io`, `quay.io`, `mcr.microsoft.com`, `public.ecr.aws`, `registry.gitlab.com`. IP manzil, `localhost` va ichki nomlar rad etiladi | `BULUTSKAN_ALLOWED_REGISTRIES` |
+
+Kirish va so‘rovlar hisoblagichlari `web` jarayoni xotirasida saqlanadi (server rejimida bitta uvicorn jarayoni). Kvota va tekshiruv oralig‘i `SCAN` jadvalidan hisoblanadi, shuning uchun qayta ishga tushganda ham saqlanadi.
+
+**Registrlar ro‘yxati SSRF dan himoya qiladi.** Busiz foydalanuvchi `10.0.0.5:5000/x` kabi nom kiritib, serverni ichki tarmoqdagi manzilga murojaat qildirishi mumkin edi.
+
+**Ma’lum cheklov.** Obraz hajmi `docker pull` tugagandan keyin tekshiriladi, chunki Docker Engine obrazni avval to‘liq yuklab oladi. Juda katta obraz trafik va diskni band qiladi. Bunga qarshi: bo‘sh disk tekshiruvi, `pull` uchun vaqt limiti, kvota va registrlar ro‘yxati. 8-bosqichda manifestdagi qatlamlar hajmini `pull` dan oldin o‘qish varianti ko‘riladi: digest bilan qotirilgan `crane` konteyneri orqali.
+
+### 17.6. HTTP xavfsizligi
+
+| Sarlavha | Qiymat | Rejim |
+|---|---|---|
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` | Ikkalasi |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Server |
+| `X-Frame-Options` | `DENY` | Ikkalasi |
+| `X-Content-Type-Options` | `nosniff` | Ikkalasi |
+| `Referrer-Policy` | `no-referrer` | Ikkalasi |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Ikkalasi |
+| `Cross-Origin-Opener-Policy` | `same-origin` | Ikkalasi |
+| `Cache-Control` | Kirishdan keyingi sahifalarda `no-store` | Ikkalasi |
+
+Sarlavhalarni `web` qo‘yadi, shuning uchun ular testlarda tekshiriladi. Caddy `Server` sarlavhasini olib tashlaydi va so‘rov tanasini cheklaydi: `.tar` yuklash marshrutida 2 GB, qolganlarida 20 MB.
+
+**Sessiya.**
+- Cookie: `HttpOnly`, `SameSite=Strict`, server rejimida `Secure`.
+- Muddat: mutlaq 8 soat, harakatsizlikda 30 daqiqa.
+- Imzo kaliti: `BULUTSKAN_SECRET_KEY`, kamida 32 bayt, faqat serverdagi `.env` da.
+- Har so‘rovda foydalanuvchi bazadan qayta o‘qiladi, shuning uchun `user disable` darhol ta’sir qiladi.
+- Parol almashtirilganda yoki akkaunt o‘chirilganda `USER.session_epoch` oshadi va eski cookie’lar bekor bo‘ladi.
+
+**Proksi orqasida.** uvicorn `--proxy-headers --forwarded-allow-ips` bilan ishga tushadi va faqat Caddy konteyneriga ishonadi. Audit va tezlik cheklovi uchun mijoz IP si shu yerdan olinadi.
+
+**Ishga tushishdagi tekshiruvlar.** Server rejimida quyidagilardan biri bajarilmasa, ilova ishga tushmaydi:
+- `SECRET_KEY` berilgan, kamida 32 bayt va `.env.example` dagi namunaga teng emas;
+- `BULUTSKAN_PUBLIC_URL` `https://` bilan boshlanadi;
+- `web` konteynerida `docker.sock` ko‘rinmaydi;
+- administrator mavjud yoki uni yaratish uchun `.env` qiymatlari berilgan.
+
+### 17.7. Ma’lumotlarni saqlash va o‘chirish
+
+| Ma’lumot | Joyi | Qachon o‘chiriladi |
+|---|---|---|
+| Yuklangan IaC fayllari va ZIP | `data/uploads/{uid}` → `workdir/{uid}/input` | Tekshiruv tugashi bilan (xato bo‘lsa ham) |
+| Yuklangan `.tar` va `docker save` arxivi | `workdir/{uid}/input/image.tar` | Tekshiruv tugashi bilan |
+| Tortib olingan foydalanuvchi obrazi | Docker Engine | Tekshiruvdan keyin `docker rmi` (server) |
+| Xom JSON hisobotlar, DOCX | `data/hisobotlar/{uid}` | 30 kundan keyin |
+| Topilmalar (`FINDING`, `FINDING_GROUP`) | SQLite | 30 kundan keyin |
+| `SCAN` qatori (kim, qachon, nima, xulosa sonlari) | SQLite | Audit uchun qoladi |
+| Audit jurnali | SQLite `audit_log` | 365 kundan keyin |
+| Namoyish tekshiruvlari | SQLite | O‘chirilmaydi |
+
+Muddatlarni `BULUTSKAN_REPORT_RETENTION_DAYS=30` va `BULUTSKAN_AUDIT_RETENTION_DAYS=365` belgilaydi. Tozalashni `worker` kuniga bir marta bajaradi va jurnalga yozadi.
+
+### 17.8. Kirish va audit jurnali
+
+`AUDIT_LOG` har bir muhim amalni yozadi: vaqt (UTC), foydalanuvchi, rol, IP, amal, obyekt, natija (`ok`, `denied`, `failed`) va qo‘shimcha ma’lumot (JSON).
+
+Amallar:
+- **kirish:** `login_ok`, `login_failed`, `login_locked`, `logout`;
+- **tekshiruv:** `scan_submitted`, `scan_started`, `scan_finished`, `scan_failed`, `scan_viewed`, `export_downloaded`;
+- **cheklovlar:** `quota_exceeded`, `rate_limited`;
+- **akkauntlar:** `user_added`, `user_disabled`, `password_changed`;
+- **tizim:** `db_update`, `integrity_failed`, `retention_cleanup`.
+
+Administrator jurnalni `/admin/audit` sahifasida filtrlar bilan ko‘radi va CSV ga eksport qiladi. Bundan tashqari `web` va `worker` JSON qatorlarini stdout ga yozadi (`docker compose logs`). Docker’ning `json-file` drayveri ularni hajm bo‘yicha aylantiradi. Parollar, tokenlar, proksi manzili va yuklangan fayllar mazmuni jurnalga yozilmaydi.
+
+### 17.9. Serverga joylashtirish (8-bosqich)
+
+Repozitoriyga qo‘shiladigan fayllar:
+
+| Fayl | Mazmuni |
+|---|---|
+| `deploy/Dockerfile` | Ikki nishon: `web` (Docker CLI’siz) va `worker` (Docker CLI bilan). Ikkalasida root bo‘lmagan foydalanuvchi |
+| `deploy/Caddyfile` | Domen, avtomatik HTTPS, so‘rov hajmi limitlari, `Server` sarlavhasini olib tashlash, kirish jurnali |
+| `docker-compose.yml` | `caddy` (digest bilan qotirilgan), `web`, `worker`. Tarmoqlar, `/srv/bulutskan/data` bir xil yo‘l bilan, cheklovlar |
+| `.env.example` | Server bo‘limi: `BULUTSKAN_MODE`, `BULUTSKAN_PUBLIC_URL`, domen, kvotalar. Maxfiy qiymatlar o‘rnida faqat namuna |
+| `docs/serverga_joylash.md` | Ubuntu 24.04 ni noldan sozlash (o‘zbek tilida) |
+
+`docs/serverga_joylash.md` mazmuni:
+1. Tizimni yangilash, `unattended-upgrades`.
+2. Alohida foydalanuvchi va SSH kalit bilan kirish: `PasswordAuthentication no`, `PermitRootLogin no`.
+3. UFW: faqat 22, 80, 443. Docker e’lon qilingan (`ports:`) portlar uchun UFW qoidalarini chetlab o‘tadi. Shuning uchun `ports:` faqat `caddy` da bo‘ladi va bu alohida tekshiriladi.
+4. Docker Engine’ni rasmiy repozitoriydan o‘rnatish, `data/` va `.env` uchun huquqlar (`chmod 600 .env`).
+5. Domen DNS yozuvi, birinchi ishga tushirish, sertifikat olinganini tekshirish.
+6. Vositalarni tayyorlash: `tools pull`, `build-checkov`, `lock-checkov`, `db-update`.
+7. Birinchi administrator va mehmon akkaunti.
+8. Yangilash tartibi: `git pull` → `docker compose build` → `docker compose up -d` → `tools verify`.
+9. Zaxira nusxa: SQLite’ning onlayn nusxasi, `.env` va `tool_lock.json` har kuni server tashqarisiga shifrlangan holda. Qayta tiklashni sinab ko‘rish.
+
+**Maxfiy qiymatlar.** `BULUTSKAN_SECRET_KEY` va `BULUTSKAN_ADMIN_PASSWORD` faqat serverdagi `/srv/bulutskan/.env` da saqlanadi (`chmod 600`). `.env` `.gitignore` da. `.env.example` da faqat namuna turadi, server rejimi esa namuna qiymat bilan ishga tushmaydi. Kalit yaratish: `openssl rand -base64 48`.
+
+### 17.10. Ochiq savollar
+
+| № | Savol | Tavsiyam |
+|---|---|---|
+| 1 | `worker` Docker’ga qanday kirsin? A — tizimdagi Docker socket, `worker` qattiq cheklangan. B — rootless Docker: skaner konteyneridan chiqib ketgan hujumchi ham root bo‘lmaydi, lekin Ubuntu 24.04’da AppArmor profili va cgroup delegatsiyasini sozlash kerak, aks holda `--cpus` va `--memory` limitlari ishlamaydi | A bilan boshlash, 8-bosqichda B ni VPS’da sinab ko‘rish va ishlasa o‘tish |
+| 2 | Mehmon qanday skanerlay oladi? | Faqat namoyish IaC fayllari va eksperimentdagi 15 obraz, fayl yuklash yo‘q, kuniga 3 ta |
+| 3 | 30 kundan keyin nima o‘chadi? | Hisobot fayllari va topilmalar. `SCAN` qatori (kim, qachon, nimani) audit uchun qoladi |
+| 4 | VPS diski | Kamida 40 GB: bazalar ~3–4 GB, vosita obrazlari ~2 GB, 2 parallel tekshiruv × (2 GB obraz + 2 GB `.tar`), Docker keshi |
+
+## 18. Qabul qilingan qarorlar
 
 | № | Masala | Qaror |
 |---|---|---|
@@ -839,15 +1098,19 @@ Platforma Windows’da ishlatiladi, bulutli testlar esa Linux’da o‘tadi. Lin
 | 6 | AHP vaznlari | `ahp.json` dagi aniq `w`, ballar `S2` (foydalanuvchi tasdiqlagan) |
 | 7 | Digest mos kelmaganda | Tekshiruvlar bloklanadi, tarix, demo va AHP ishlaydi (foydalanuvchi tasdiqlagan) |
 | 8 | KICS uchun yozish katalogi | Bo‘sh, alohida `out/` katalogi |
+| 9 | `--unknown-severity` | Sukut `medium`, faqat `--fail-on` qarorida (foydalanuvchi so‘ragan) |
+| 10 | Server rejimi | Lokal rejim saqlanadi. Server: Caddy + `web` + `worker`, rollar, kvotalar, audit, 30 kunlik saqlash (17-bo‘lim, foydalanuvchi so‘ragan) |
+| 11 | Navbat | SQLite (`SCAN` jadvali), Redis emas (17.3-bo‘lim) |
 
-## 18. Bosqichlar
+## 19. Bosqichlar
 
 | Bosqich | Natija |
 |---|---|
 | 1 | `docs/arxitektura.md`, `.gitignore`, `.env.example` |
 | 2 | Parserlar, yagona model, konsensus, AHP va ularning testlari |
 | 3 | Xavfsiz skaner ishga tushirgich, digest tekshiruvi, bazalarni yangilash, yuklash himoyasi, tekshiruv quvuri, CLI (`scan`, `db-update`, `db-status`, `tools`), `--unknown-severity`, Windows sinov ko‘rsatmasi |
-| 4 | SQLite (tarix), veb-interfeys: kirish, panel, IaC va obraz tekshiruvi, natijalar, AHP, tarix |
+| 4 | SQLite (tarix va navbat), `worker` (lokalda ichki, serverda alohida jarayon), akkauntlar va rollar (`user add`), tezlik cheklovi va kvotalar, xavfsizlik sarlavhalari va sessiya, audit jurnali, saqlash muddati. Veb-interfeys: kirish, panel, IaC va obraz tekshiruvi, natijalar, AHP, tarix, administrator sahifalari. Ikkala rejim ham testlanadi |
 | 5 | DOCX hisobot, JSON eksport, CLI, CI namunalari |
 | 6 | O‘zbekcha README, LICENSE (MIT) |
-| 7 | `bulutskan demo-import` |
+| 7 | `bulutskan demo-import`. Mehmon roli va panel unga tayanadi, shuning uchun 4-bosqich bilan birga yoziladi |
+| 8 | Serverga joylashtirish: `deploy/Dockerfile`, `deploy/Caddyfile`, `docker-compose.yml`, server `.env.example`, `docs/serverga_joylash.md` (Ubuntu 24.04, UFW, SSH kalit, yangilash, zaxira nusxa) |

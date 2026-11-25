@@ -648,6 +648,15 @@ def serve(
     if not settings.is_server and host not in ("127.0.0.1", "localhost", "::1"):
         typer.secho(f"Ogohlantirish: lokal rejimda {host} manzili tashqi tarmoqqa ochiq bo‘lishi mumkin", fg="yellow")
     if not settings.is_server:
+        running = _running_instance(settings)
+        if running is not None:
+            # Belgi ikkinchi marta bosildi: yangi nusxa (va ikkinchi worker) ochilmaydi.
+            typer.secho(f"BulutSkan allaqachon ishlayapti: {running}", fg=typer.colors.GREEN, bold=True)
+            if settings.open_browser and not no_browser:
+                import webbrowser
+
+                webbrowser.open(running)
+            raise typer.Exit(EXIT_OK)
         port = _free_port(host, port)
     url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '::') else host}:{port}/"
     web_app = create_app(settings)
@@ -657,15 +666,46 @@ def serve(
         typer.echo("Dasturni to‘xtatish uchun shu oynani yoping (yoki Ctrl+C).")
         if settings.open_browser and not no_browser:
             _open_browser_when_ready(url)
-    uvicorn.run(
-        web_app,
-        host=host,
-        port=port,
-        log_level="info",
-        proxy_headers=settings.is_server,
-        forwarded_allow_ips=os.environ.get("BULUTSKAN_TRUSTED_PROXY", "127.0.0.1"),
-        server_header=False,
-    )
+    if not settings.is_server:
+        _write_instance(settings, port)
+    try:
+        uvicorn.run(
+            web_app,
+            host=host,
+            port=port,
+            log_level="info",
+            proxy_headers=settings.is_server,
+            forwarded_allow_ips=os.environ.get("BULUTSKAN_TRUSTED_PROXY", "127.0.0.1"),
+            server_header=False,
+        )
+    finally:
+        if not settings.is_server:
+            settings.instance_file.unlink(missing_ok=True)
+
+
+def _write_instance(settings: Settings, port: int) -> None:
+    import json
+
+    settings.instance_file.parent.mkdir(parents=True, exist_ok=True)
+    settings.instance_file.write_text(json.dumps({"port": port, "pid": os.getpid()}), encoding="utf-8")
+
+
+def _running_instance(settings: Settings) -> str | None:
+    """Shu ma’lumotlar katalogi bilan ishlab turgan nusxa manzili (bo‘lmasa ``None``)."""
+    import json
+    import urllib.request
+
+    try:
+        port = int(json.loads(settings.instance_file.read_text(encoding="utf-8"))["port"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    url = f"http://127.0.0.1:{port}/"
+    try:
+        with urllib.request.urlopen(url + "health", timeout=2) as resp:  # noqa: S310 - faqat 127.0.0.1
+            body = json.loads(resp.read().decode("utf-8"))
+    except (OSError, ValueError):
+        return None
+    return url if isinstance(body, dict) and body.get("instance") == settings.instance_id else None
 
 
 def main() -> None:  # pragma: no cover

@@ -516,3 +516,82 @@ def test_no_external_resources_or_inline_code() -> None:
         assert not re.search(r"\son[a-z]+=", text), path  # onclick va h.k.
     vendor = {p.name for p in (WEB / "static" / "vendor").iterdir()}
     assert {"htmx-2.0.4.min.js", "chart-4.4.7.umd.min.js", "LICENSES.txt"} <= vendor
+
+
+# ------------------------------------------------------------- Windows dasturi
+
+
+def test_first_admin_login_opens_setup_wizard(client: TestClient) -> None:
+    add(client, "admin", "admin")
+    add(client, "tahlilchi", "analyst")
+    assert login(client, "admin").headers["location"] == "/tools"  # vositalar hali tekshirilmagan
+    assert login(client, "tahlilchi").headers["location"] == "/"
+    with db_of(client).session() as s:
+        setup.save_setting(s, "setup_state", {"docker": {"status": "red"}})
+    assert login(client, "admin").headers["location"] == "/"
+
+
+def test_health_reports_instance_id(client: TestClient) -> None:
+    settings: Settings = client.app.state.bulutskan.settings  # type: ignore[attr-defined]
+    assert client.get("/health").json()["instance"] == settings.instance_id
+
+
+class _Resp(io.BytesIO):
+    def __enter__(self) -> _Resp:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+
+def test_second_launch_reuses_running_instance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ish stolidagi belgi ikkinchi marta bosilsa, yangi server va worker ochilmaydi."""
+    import urllib.request
+
+    from typer.testing import CliRunner
+
+    from bulutskan import cli
+
+    settings = make_settings(tmp_path)
+    monkeypatch.setattr(cli, "get_settings", lambda: settings)
+    assert cli._running_instance(settings) is None  # fayl yo‘q
+    cli._write_instance(settings, 8123)
+    seen: list[str] = []
+
+    def fake_urlopen(url: str, timeout: float = 0) -> _Resp:
+        seen.append(url)
+        return _Resp(json.dumps({"status": "ok", "instance": settings.instance_id}).encode())
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    assert cli._running_instance(settings) == "http://127.0.0.1:8123/"
+    res = CliRunner().invoke(cli.app, ["serve", "--no-browser"])
+    assert res.exit_code == 0 and "allaqachon ishlayapti: http://127.0.0.1:8123/" in res.output
+    assert seen[-1] == "http://127.0.0.1:8123/health"
+    # boshqa ma’lumotlar katalogidagi nusxa hisobga olinmaydi
+    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=0: _Resp(b'{"instance": "boshqa"}'))
+    assert cli._running_instance(settings) is None
+
+    def refused(url: str, timeout: float = 0) -> _Resp:
+        raise ConnectionRefusedError(url)
+
+    monkeypatch.setattr(urllib.request, "urlopen", refused)
+    assert cli._running_instance(settings) is None  # eski fayl qolgan, server yopilgan
+
+
+def test_docker_desktop_path_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import shutil
+    import sys
+
+    from bulutskan import config
+
+    exe = tmp_path / "docker.exe"
+    exe.write_bytes(b"")
+    monkeypatch.setattr(config, "WINDOWS_DOCKER", exe)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert config.default_docker_bin() == str(exe)
+    monkeypatch.setattr(shutil, "which", lambda name: "C:/docker/docker.exe")
+    assert config.default_docker_bin() == "docker"
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    assert config.default_docker_bin() == "docker"

@@ -8,7 +8,9 @@ orqali o‘qiladi.
 
 from __future__ import annotations
 
+import hashlib
 import os
+import shutil
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -47,6 +49,30 @@ def default_data_dir() -> Path:
         return Path(base) / "BulutSkan" / "data"
     return Path("./data")
 
+
+#: Docker Desktop’ning standart o‘rnatish yo‘li (PATH da bo‘lmasa).
+WINDOWS_DOCKER = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Docker" / "Docker" / "resources" / "bin" / "docker.exe"
+
+
+def default_docker_bin() -> str:
+    """``docker`` buyrug‘i: PATH dan, Windows’da topilmasa Docker Desktop papkasidan.
+
+    Ish stolidagi belgidan ishga tushirilganda PATH Docker Desktop o‘rnatilgandan
+    oldingi holatda qolgan bo‘lishi mumkin (kompyuter qayta yuklanmagan).
+    """
+    if shutil.which("docker") is None and sys.platform == "win32" and WINDOWS_DOCKER.is_file():
+        return str(WINDOWS_DOCKER)
+    return "docker"
+
+
+def env_files() -> tuple[str, ...]:
+    """Sozlamalar fayllari: joriy katalogdagi ``.env``; o‘rnatilgan dasturda
+    ``%LOCALAPPDATA%\\BulutSkan\\bulutskan.env`` ham."""
+    if FROZEN:
+        return (".env", str(default_data_dir().parent / "bulutskan.env"))
+    return (".env",)
+
+
 _MB = 1024 * 1024
 
 
@@ -55,7 +81,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="BULUTSKAN_",
-        env_file=".env",
+        env_file=env_files(),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -89,7 +115,7 @@ class Settings(BaseSettings):
     pull_timeout_s: int = Field(default=1800, ge=10)
     db_update_timeout_s: int = Field(default=1800, ge=10)
 
-    docker_bin: str = "docker"
+    docker_bin: str = Field(default_factory=default_docker_bin)
     #: Grype bazasi eskirganini tekshirsinmi (sukut: ha). Eksperimentni eski
     #: baza bilan qayta takrorlash uchun ``false`` qilish mumkin.
     grype_validate_age: bool = True
@@ -169,6 +195,16 @@ class Settings(BaseSettings):
         """Ma’lumotlar katalogining mutlaq yo‘li."""
         p = self.data_dir
         return (p if p.is_absolute() else Path.cwd() / p).resolve()
+
+    @property
+    def instance_id(self) -> str:
+        """Ma’lumotlar katalogi identifikatori (bitta nusxa tekshiruvi uchun)."""
+        return hashlib.sha256(str(self.data_path).encode("utf-8")).hexdigest()[:16]
+
+    @property
+    def instance_file(self) -> Path:
+        """Ishlab turgan lokal nusxa porti."""
+        return self.data_path / "instance.json"
 
     @property
     def workdir(self) -> Path:

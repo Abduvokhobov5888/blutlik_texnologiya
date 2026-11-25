@@ -172,7 +172,8 @@ def health(request: Request) -> JSONResponse:
     with st.db.session() as s:
         demo = int(s.scalar(select(func.count()).select_from(Scan).where(Scan.is_demo.is_(True))) or 0)
     return JSONResponse({"status": "ok", "version": __version__, "mode": st.settings.mode, "demo_scans": demo,
-                         "demo_importing": bool(st.extra.get("demo_importing"))})
+                         "demo_importing": bool(st.extra.get("demo_importing")),
+                         "instance": None if st.settings.is_server else st.settings.instance_id})
 
 
 @router.post("/lang", dependencies=[Depends(csrf_protect)])
@@ -253,6 +254,10 @@ async def login(request: Request, username: str = Form(...), password: str = For
         request.session.clear()
         request.session.update({"u": user.id, "e": user.session_epoch, "iat": time.time(), "seen": time.time()})
         csrf_token(request)
+        role = user.role
+    # Birinchi kirish: vositalar hali tekshirilmagan bo‘lsa, administrator sozlash ustasiga o‘tadi.
+    if role == ROLE_ADMIN and setup.get_setting(st.db, "setup_state") is None and not st.settings.is_server:
+        return RedirectResponse("/tools", status_code=303)
     return RedirectResponse("/", status_code=303)
 
 

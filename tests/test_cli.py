@@ -66,10 +66,13 @@ def test_image_below_threshold_exits_0(fake: FakeDocker) -> None:
     ],
 )
 def test_unknown_severity_option(fake: FakeDocker, extra: list[str], code: int) -> None:
-    """Faqat Checkov ishlagan holat: barcha topilmalar darajasi noma’lum."""
+    """Faqat Checkov ishlagan holat: barcha topilmalar darajasi noma’lum.
+
+    Bu qisman tekshiruv, shuning uchun natija ``--allow-partial`` bilan qabul qilinadi.
+    """
     fake.fail[Tool.KICS] = (2, "o‘chirilgan")
     fake.fail[Tool.TRIVY] = (2, "o‘chirilgan")
-    res = _run("scan", "--iac", IAC, *extra)
+    res = _run("scan", "--iac", IAC, "--allow-partial", *extra)
     assert res.exit_code == code, res.output
 
 
@@ -151,6 +154,7 @@ def test_partial_iac_scan_is_clearly_marked(fake: FakeDocker, tmp_path: Path) ->
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["ground_truth"]["complete"] is False
     assert data["ground_truth"]["tools_failed"] == ["checkov"]
+    assert res.exit_code == 2
 
 
 def test_full_iac_scan_is_complete(fake: FakeDocker, tmp_path: Path) -> None:
@@ -160,3 +164,66 @@ def test_full_iac_scan_is_complete(fake: FakeDocker, tmp_path: Path) -> None:
     assert "Hech bir vosita topmagan: DF-03, K8S-09" in res.output
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["ground_truth"]["complete"] is True
+
+
+@pytest.mark.parametrize(
+    ("extra", "code"),
+    [
+        ([], 2),  # qisman → 2 (sukut)
+        (["--fail-on", "critical"], 2),  # chegara oshgan bo‘lsa ham avval qisman ekani
+        (["--allow-partial"], 0),
+        (["--allow-partial", "--fail-on", "high"], 1),  # KICS va Trivy HIGH topgan
+    ],
+)
+def test_partial_scan_exit_codes(fake: FakeDocker, extra: list[str], code: int) -> None:
+    fake.fail[Tool.CHECKOV] = (2, "ProxySchemeUnknown: Proxy URL had no scheme")
+    res = _run("scan", "--iac", IAC, *extra)
+    assert res.exit_code == code, res.output
+    assert "Ishlamagan vositalar:" in res.output
+    assert "checkov — Sxemasiz proksi o‘zgaruvchisi [proxy_scheme, chiqish kodi 2]" in res.output
+    assert f"Chiqish kodi {code}:" in res.output
+
+
+def test_partial_scan_reasons_in_json(fake: FakeDocker, tmp_path: Path) -> None:
+    fake.fail[Tool.GRYPE] = (137, "")
+    out = tmp_path / "obraz.json"
+    res = _run("scan", "--image", "nginx:1.21", "--fail-on", "critical", "--json", str(out))
+    assert res.exit_code == 2
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["scan"]["status"] == "partial"
+    assert data["failures"] == [
+        {
+            "tool": "grype",
+            "reason_code": "out_of_memory",
+            "reason_title": "Xotira yetmadi",
+            "returncode": 137,
+            "error": data["failures"][0]["error"],
+            "duration_s": data["failures"][0]["duration_s"],
+        }
+    ]
+    assert "BULUTSKAN_CONTAINER_MEMORY" in data["failures"][0]["error"]
+    assert data["exit"] == {
+        "code": 2,
+        "reason": "Tekshiruv qisman: grype ishlamadi (istisno uchun --allow-partial)",
+        "partial": True,
+        "allow_partial": False,
+    }
+    grype = next(t for t in data["tools"] if t["tool"] == "grype")
+    assert grype["ok"] is False and grype["reason_code"] == "out_of_memory"
+
+
+def test_missing_database_reason(fake: FakeDocker) -> None:
+    for p in (fake.settings.grype_cache / "6").iterdir():
+        p.unlink()
+    res = _run("scan", "--image", "nginx:1.21", "--allow-partial")
+    assert res.exit_code == 0
+    assert "grype — Zaifliklar bazasi yo‘q [missing_db]" in res.output
+    assert "Qisman natija qabul qilindi" in res.output
+
+
+def test_complete_scan_has_no_failures_in_json(fake: FakeDocker, tmp_path: Path) -> None:
+    out = tmp_path / "toliq.json"
+    res = _run("scan", "--image", "nginx:1.21", "--json", str(out))
+    assert res.exit_code == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["failures"] == [] and data["exit"]["code"] == 0 and data["exit"]["partial"] is False

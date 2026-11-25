@@ -25,12 +25,20 @@ from bulutskan import __version__
 from bulutskan.config import RESOURCES, Settings, get_settings
 from bulutskan.core.consensus import ConsensusLabel
 from bulutskan.core.eol import EOL_WARNING_UZ
-from bulutskan.core.gate import GateDecision, UnknownSeverityPolicy, evaluate_gate, parse_fail_on, severity_label
+from bulutskan.core.gate import (
+    GateDecision,
+    UnknownSeverityPolicy,
+    decide_exit,
+    evaluate_gate,
+    parse_fail_on,
+    severity_label,
+)
 from bulutskan.core.models import SEVERITY_ORDER, ScanKind, Tool
 from bulutskan.reporting.json_export import build_export, write_export
 from bulutskan.scanner.dbupdate import DB_NAMES, database_status, detect_proxy, mask_proxy, proxy_env, update_databases
 from bulutskan.scanner.docker import DockerClient, DockerUnavailable
 from bulutskan.scanner.image import ImagePrepareError
+from bulutskan.scanner.runs import FAILURE_CODES
 from bulutskan.scanner.tools import (
     IntegrityError,
     IntegrityStatus,
@@ -220,9 +228,9 @@ def _print_gate(gate: GateDecision) -> None:
         f" (--unknown-severity {gate.policy.value})"
     )
     if gate.failed:
-        typer.secho(msg + " → KONVEYER TO‘XTATILADI (chiqish kodi 1)", fg=typer.colors.RED, bold=True)
+        typer.secho(msg + " → KONVEYER TO‘XTATILADI", fg=typer.colors.RED, bold=True)
     else:
-        _ok(msg + " → o‘tdi (chiqish kodi 0)")
+        _ok(msg + " → o‘tdi")
 
 
 @app.command()
@@ -240,6 +248,10 @@ def scan(
         help="Darajasi noma’lum topilmalar (masalan, faqat Checkov topgani) --fail-on qarorida qaysi daraja deb olinadi.",
     ),
     json_out: Path | None = typer.Option(None, "--json", help="Natijani JSON faylga yozish."),
+    allow_partial: bool = typer.Option(
+        False, "--allow-partial",
+        help="Biror vosita ishlamasa ham natijani qabul qilish. Sukut bo‘yicha qisman tekshiruv 2 kodi bilan tugaydi.",
+    ),
 ) -> None:
     """IaC katalogi yoki konteyner obrazini tekshirish."""
     chosen = [x for x in (iac, image, image_tar) if x is not None]
@@ -267,16 +279,34 @@ def scan(
     _print_outcome(outcome, policy)
     gate = evaluate_gate(outcome.consensus, parse_fail_on(fail_on.value), fixable_only, policy) \
         if (fail_on is not None and outcome.consensus is not None) else None
+    failed_tools = [t.value for t in outcome.failed_tools]
+    decision = decide_exit(outcome.status, failed_tools, gate, allow_partial)
     if json_out is not None:
-        write_export(json_out, build_export(outcome, policy, gate))
+        write_export(json_out, build_export(outcome, policy, gate, exit_decision=decision))
         typer.echo(f"\nJSON: {json_out}")
-    if outcome.status == ScanStatus.FAILED:
-        _err(outcome.error or "Tekshiruv bajarilmadi: birorta vosita ishlamadi")
-        raise typer.Exit(EXIT_ERROR)
+    if outcome.status == ScanStatus.FAILED and outcome.error:
+        _err(outcome.error)
+    _print_failures(outcome)
     if gate is not None:
         _print_gate(gate)
-        raise typer.Exit(gate.exit_code)
-    raise typer.Exit(EXIT_OK)
+    color = typer.colors.RED if decision.code else typer.colors.GREEN
+    typer.secho(f"\nChiqish kodi {decision.code}: {decision.reason}", fg=color, bold=True, err=decision.code == EXIT_ERROR)
+    raise typer.Exit(decision.code)
+
+
+def _print_failures(outcome: ScanOutcome) -> None:
+    """Qaysi vosita nima sababdan ishlamaganini aniq ko‘rsatadi."""
+    failed = [r for r in outcome.tool_runs if not r.ok]
+    if not failed:
+        return
+    typer.secho("\nIshlamagan vositalar:", fg=typer.colors.RED, bold=True)
+    for run in failed:
+        code = run.reason_code or "exit_code"
+        title = FAILURE_CODES.get(code, code)
+        rc = f", chiqish kodi {run.returncode}" if run.returncode is not None else ""
+        typer.secho(f"  {run.tool.value} — {title} [{code}{rc}]", fg=typer.colors.RED)
+        if run.error:
+            typer.echo(f"    {run.error}")
 
 
 # ------------------------------------------------------------- bazalar

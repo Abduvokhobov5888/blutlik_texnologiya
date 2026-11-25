@@ -36,6 +36,8 @@ class ToolRun:
     error: str | None = None
     raw_path: Path | None = None
     notes: list[str] = field(default_factory=list)
+    #: Ishlamaganlik sababi kodi (:data:`FAILURE_CODES`), muvaffaqiyatda ``None``.
+    reason_code: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -45,10 +47,36 @@ class ToolRun:
             "returncode": self.returncode,
             "duration_s": round(self.duration_s, 2),
             "error": self.error,
+            "reason_code": self.reason_code,
             "version": self.report.tool_version if self.report else None,
             "findings": len(self.report.findings) if self.report else 0,
             "notes": list(self.notes),
         }
+
+
+#: Vosita ishlamaganligi sabablari (hisobot va JSON uchun).
+FAILURE_CODES: dict[str, str] = {
+    "timeout": "Vaqt tugadi",
+    "out_of_memory": "Xotira yetmadi",
+    "docker_error": "Docker konteynerni ishga tushira olmadi",
+    "proxy_scheme": "Sxemasiz proksi o‘zgaruvchisi",
+    "missing_db": "Zaifliklar bazasi yo‘q",
+    "bad_report": "Hisobotni o‘qib bo‘lmadi",
+    "exit_code": "Vosita xato kodi bilan tugadi",
+}
+
+
+def failure_code(res: RunResult) -> str:
+    """Xato turini qisqa kod bilan belgilaydi."""
+    if res.timed_out:
+        return "timeout"
+    if res.returncode == 137:
+        return "out_of_memory"
+    if res.returncode == 125:
+        return "docker_error"
+    if "ProxySchemeUnknown" in res.stderr_text or "Proxy URL had no scheme" in res.stderr_text:
+        return "proxy_scheme"
+    return "exit_code"
 
 
 def explain_failure(res: RunResult) -> str:
@@ -92,12 +120,14 @@ def finish_run(
 ) -> ToolRun:
     """Natija faylini o‘qiydi va parser orqali :class:`ToolRun` ga aylantiradi."""
     if res.timed_out or res.returncode not in ACCEPTED_EXIT_CODES[tool]:
-        return ToolRun(tool, image_ref, False, None, res.returncode, res.duration_s, explain_failure(res), raw_path)
+        return ToolRun(tool, image_ref, False, None, res.returncode, res.duration_s, explain_failure(res), raw_path,
+                       reason_code=failure_code(res))
     try:
         report = parse(load_json(raw_path))
     except ParseError as exc:
         return ToolRun(
             tool, image_ref, False, None, res.returncode, res.duration_s,
             f"Hisobotni o‘qib bo‘lmadi: {exc}. stderr: {_tail(res.stderr_text, 400)}", raw_path,
+            reason_code="bad_report",
         )
     return ToolRun(tool, image_ref, True, report, res.returncode, res.duration_s, None, raw_path)

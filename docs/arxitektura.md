@@ -833,7 +833,15 @@ Qo‘shimcha `scan` parametrlari: `--image-name` (`--image-tar` uchun obraz nomi
 
 `--unknown-severity {ignore,low,medium,high}` (sukut: `medium`). Checkov’ning ochiq versiyasi jiddiylik bermaydi. Xatoni faqat Checkov topgan bo‘lsa, guruh darajasi UNKNOWN bo‘ladi va u hech qachon chegaraga yetmasdi. Namoyish fayllarida bunday xato bitta — TF-20 (HTTP listener). Unga 30 ta toifalanmagan Checkov topilmasi ham qo‘shiladi. Bu parametr faqat `--fail-on` qarorida ishlatiladi: ma’lumotda daraja `UNKNOWN` bo‘lib qoladi, hisobotda esa `noma’lum (CI uchun medium deb olindi)` deb yoziladi. JSON eksportda `severity`, `severity_ci` va `severity_label` maydonlari bor.
 
-Chiqish kodlari: `0` — chegaradan oshmadi; `1` — chegaradan oshdi; `2` — foydalanish xatosi, vosita yaxlitligi buzilgan yoki tekshiruv bajarilmadi.
+Chiqish kodlari:
+
+| Kod | Ma’nosi |
+|---|---|
+| `0` | Chegaradan oshmadi (yoki `--fail-on` berilmagan) |
+| `1` | `--fail-on` chegarasidan oshgan topilma bor |
+| `2` | Foydalanish xatosi, vosita yaxlitligi buzilgan, tekshiruv bajarilmadi **yoki tekshiruv qisman** (biror vosita ishlamadi) |
+
+**Qisman tekshiruv** sukut bo‘yicha 2 kodi bilan tugaydi: xavfsizlik tekshiruvi “xato bo‘lsa to‘xtatish” qoidasiga bo‘ysunadi. Busiz masalan Checkov yiqilsa, faqat u topadigan xatolar (namoyish fayllarida TF-20) konveyerdan jimgina o‘tib ketardi. Windows’dagi sinovda aynan shunday holat bo‘lgan. `--allow-partial` berilsa, qaror faqat ishlagan vositalar bo‘yicha qabul qilinadi (0 yoki 1). Ikkala holatda ham chiqish oxirida “Ishlamagan vositalar” bo‘limi chiqadi: vosita, sabab kodi (`timeout`, `out_of_memory`, `docker_error`, `proxy_scheme`, `missing_db`, `bad_report`, `exit_code`), chiqish kodi va tushuntirish. JSON eksportda bu `failures` ro‘yxatida, qaror esa `exit` obyektida (`code`, `reason`, `partial`, `allow_partial`) saqlanadi. DOCX hisobotda (5-bosqich) ham shu ma’lumot alohida bo‘lim bo‘ladi.
 
 GitHub Actions va GitLab CI namunalari `ci/` katalogida turadi. Ular `.github/workflows/` ga qo‘yilmaydi, chunki repozitoriyning o‘zida ishga tushib ketmasligi kerak.
 
@@ -1242,6 +1250,7 @@ Soxta docker (`tests/fakes.py`) bilan tekshiriladi:
 | 11 | Navbat | SQLite (`SCAN` jadvali), Redis emas (17.3-bo‘lim) |
 | 12 | Birinchi sozlash ustasi | To‘rt qadam: Docker → vositalar → Checkov → bazalar. Uzoq amallarni worker bajaradi, holatlar yashil, sariq va qizil (18-bo‘lim, foydalanuvchi so‘ragan) |
 | 13 | Oflayn to‘plam | SHA-256 va repozitoriyda qotirilgan obraz ID lari bilan tekshiriladi, foydalanuvchi ma’lumotlari kirmaydi (18.4-bo‘lim) |
+| 14 | Qisman tekshiruv | CI rejimida chiqish kodi 2, istisno `--allow-partial`; sabab hisobotda va JSON’da (foydalanuvchi tasdiqlagan) |
 
 ## 20. Bosqichlar
 

@@ -121,3 +121,47 @@ def evaluate_gate(
             decision.unknown_counted += 1
     decision.failed = bool(decision.counted)
     return decision
+
+
+@dataclass(frozen=True)
+class ExitDecision:
+    """CLI chiqish kodi va uning sababi."""
+
+    code: int
+    reason: str
+    partial: bool
+    allow_partial: bool
+
+
+def decide_exit(
+    status: str,
+    failed_tools: list[str],
+    gate: GateDecision | None,
+    allow_partial: bool = False,
+) -> ExitDecision:
+    """CI rejimi uchun chiqish kodi.
+
+    * ``2`` — birorta vosita ishlamadi, yoki tekshiruv qisman va
+      ``--allow-partial`` berilmagan. Xavfsizlik tekshiruvi "xato bo‘lsa
+      to‘xtatish" qoidasiga bo‘ysunadi: masalan, Checkov yiqilsa, faqat u
+      topadigan xatolar konveyerdan jimgina o‘tib ketmasligi kerak.
+    * ``1`` — chegaradan oshgan topilma bor (``--fail-on``).
+    * ``0`` — chegaradan oshmadi.
+    """
+    partial = status == "partial"
+    if status == "failed":
+        return ExitDecision(2, "Tekshiruv bajarilmadi: birorta vosita ishlamadi", partial, allow_partial)
+    if partial and not allow_partial:
+        return ExitDecision(
+            2,
+            f"Tekshiruv qisman: {', '.join(failed_tools)} ishlamadi (istisno uchun --allow-partial)",
+            partial,
+            allow_partial,
+        )
+    if gate is not None and gate.failed:
+        return ExitDecision(1, "Chegaradan oshgan topilmalar bor", partial, allow_partial)
+    if partial:
+        return ExitDecision(
+            0, f"Qisman natija qabul qilindi (--allow-partial): {', '.join(failed_tools)} ishlamadi", partial, allow_partial
+        )
+    return ExitDecision(0, "Chegaradan oshmadi" if gate is not None else "Tekshiruv tugadi", partial, allow_partial)

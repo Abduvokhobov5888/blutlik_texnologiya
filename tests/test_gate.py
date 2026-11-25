@@ -159,3 +159,19 @@ def test_cve_found_by_both_counts_once() -> None:
 
     consensus = image_consensus({Tool.TRIVY: [f(Tool.TRIVY)], Tool.GRYPE: [f(Tool.GRYPE)]})
     assert len(evaluate_gate(consensus, Severity.HIGH).counted) == 1
+
+
+def test_decide_exit_rules() -> None:
+    from bulutskan.core.gate import GateDecision, decide_exit
+
+    failing = GateDecision(failed=True, threshold=Severity.HIGH, policy=P.MEDIUM, fixable_only=False)
+    passing = GateDecision(failed=False, threshold=Severity.HIGH, policy=P.MEDIUM, fixable_only=False)
+    assert decide_exit("done", [], None).code == 0
+    assert decide_exit("done", [], passing).code == 0
+    assert decide_exit("done", [], failing).code == 1
+    assert decide_exit("failed", ["trivy", "grype"], None).code == 2
+    assert decide_exit("partial", ["checkov"], passing).code == 2
+    assert decide_exit("partial", ["checkov"], failing).code == 2
+    assert decide_exit("partial", ["checkov"], passing, allow_partial=True).code == 0
+    assert decide_exit("partial", ["checkov"], failing, allow_partial=True).code == 1
+    assert "checkov" in decide_exit("partial", ["checkov"], None).reason

@@ -128,7 +128,8 @@ def run_trivy(client: DockerClient, integrity: IntegrityReport, settings: Settin
     raw = report_dir / "trivy.json"
     if not (settings.trivy_cache / "db" / "trivy.db").is_file():
         return ToolRun(Tool.TRIVY, ref, False, None, None, 0.0,
-                       "Trivy bazasi yo‘q: avval `bulutskan db-update` ni bajaring", raw)
+                       "Trivy bazasi yo‘q: avval `bulutskan db-update` ni bajaring", raw,
+                       reason_code="missing_db")
     notes: list[str] = []
     if settings.trivy_db_mode == "readonly":
         res = client.run_container(
@@ -157,7 +158,8 @@ def run_grype(client: DockerClient, integrity: IntegrityReport, settings: Settin
     raw = report_dir / "grype.json"
     if not any(settings.grype_cache.glob("*/vulnerability.db")):
         return ToolRun(Tool.GRYPE, ref, False, None, None, 0.0,
-                       "Grype bazasi yo‘q: avval `bulutskan db-update` ni bajaring", raw)
+                       "Grype bazasi yo‘q: avval `bulutskan db-update` ni bajaring", raw,
+                       reason_code="missing_db")
     scratch = ws.scratch / "grype"
     scratch.mkdir(parents=True, exist_ok=True)
     env = {

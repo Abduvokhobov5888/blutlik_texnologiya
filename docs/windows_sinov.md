@@ -42,6 +42,10 @@ Kutilgan natija: to‘rtta obraz ko‘rinadi. Trivy, Grype va KICS digestlari `b
 
 ## 2. Loyihani yuklab olish
 
+Ikki usuldan biri tanlanadi: Git yoki GitHub’dagi ZIP. Natija bir xil bo‘ladi.
+
+**Git bilan:**
+
 ```powershell
 cd "D:\Dissertatsiyaga oid\Robiyaxon"
 git clone https://github.com/Abduvokhobov5888/blutlik_texnologiya.git BulutSkan
@@ -55,6 +59,54 @@ git -c http.proxy=http://PROKSI:PORT clone https://github.com/Abduvokhobov5888/b
 ```
 
 `PROKSI:PORT` qiymatini `docker info --format "{{.HTTPSProxy}}"` buyrug‘i ko‘rsatadi.
+
+**ZIP bilan:** GitHub’da repozitoriy sahifasini oching (https://github.com/Abduvokhobov5888/blutlik_texnologiya), **Code → Download ZIP** ni bosing va arxivni `D:\Dissertatsiyaga oid\Robiyaxon\BulutSkan` papkasiga oching. Arxiv ichidagi `blutlik_texnologiya-main` papkasining **ichidagi narsalar** `BulutSkan` ga tushishi kerak: `BulutSkan\pyproject.toml` to‘g‘ridan-to‘g‘ri shu papkada turishi lozim.
+
+### 2.1. Yangi versiyaga o‘tish
+
+Men tuzatish kiritganimdan keyin loyihani quyidagicha yangilaysiz. Ikkala usulda ham sizning ish ma’lumotlaringiz saqlanib qoladi:
+
+| Saqlanadigan narsa | Joyi | Nega yo‘qolmaydi |
+|---|---|---|
+| Python muhiti | `.venv\` | Repozitoriyda yo‘q (`.gitignore`) |
+| Zaifliklar bazalari | `data\db\` | Repozitoriyda yo‘q |
+| Checkov qulfi | `data\tool_lock.json` | Repozitoriyda yo‘q |
+| Hisobotlar, tarix, sozlamalar | `data\hisobotlar\`, `data\*.db`, `.env` | Repozitoriyda yo‘q |
+
+**1-usul: Git.**
+
+```powershell
+cd "D:\Dissertatsiyaga oid\Robiyaxon\BulutSkan"
+git pull origin main
+```
+
+**2-usul: ZIP.** `BulutSkan` papkasini **o‘chirmang** va uning o‘rniga yangi papka qo‘ymang. Aks holda `.venv`, `data\db` va `data\tool_lock.json` yo‘qoladi: bazalarni qayta yuklab olish va Checkov’ni qayta qulflash kerak bo‘ladi. Yangi fayllar mavjud papka **ustidan nusxalanadi**:
+
+1. GitHub’dan **Code → Download ZIP** orqali `blutlik_texnologiya-main.zip` ni yuklab oling (odatda `Yuklanmalar` papkasiga tushadi).
+2. Arxivni vaqtinchalik papkaga oching va ustidan nusxalang:
+
+```powershell
+cd "D:\Dissertatsiyaga oid\Robiyaxon"
+Expand-Archive -Path "$env:USERPROFILE\Downloads\blutlik_texnologiya-main.zip" -DestinationPath .\yangilash -Force
+robocopy .\yangilash\blutlik_texnologiya-main .\BulutSkan /E /NP /NFL /NDL
+Remove-Item -Recurse -Force .\yangilash
+```
+
+`robocopy` faqat nusxalaydi va almashtiradi, `BulutSkan` dagi ortiqcha fayllarni o‘chirmaydi. Uning chiqish kodi 1 yoki 3 bo‘lsa, bu xato emas: “fayllar nusxalandi” degani. `/MIR` kalitini **ishlatmang**: u `.venv` va `data\` ni o‘chirib yuboradi.
+
+Bitta kamchilik bor: repozitoriydan o‘chirilgan fayl sizda qolib ketadi. Bunday holat bo‘lsa, men aniq qaysi faylni o‘chirish kerakligini yozaman.
+
+**Ikkala usuldan keyin** yangi kutubxonalar qo‘shilgan bo‘lishi mumkin, shuning uchun:
+
+```powershell
+cd "D:\Dissertatsiyaga oid\Robiyaxon\BulutSkan"
+.\.venv\Scripts\Activate.ps1
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+pip install -e ".[dev]"
+python -m pytest -q
+```
+
+Testlar soni men xabarimda yozgan qiymatga teng bo‘lishi kerak (shu versiyada `396 passed`). Keyin `bulutskan tools verify` barcha vositalarni `ok` deb ko‘rsatishi kerak: Checkov qulfi saqlanib qolgan.
 
 ## 3. Python muhiti
 
@@ -107,7 +159,7 @@ Busiz Windows PowerShell 5.1 da `bo‘yicha` o‘rniga `boСyicha`, `—` o‘rn
 python -m pytest -q
 ```
 
-Kutilgan natija: `388 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
+Kutilgan natija: `396 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
 
 ## 5. Vositalar yaxlitligi
 
@@ -165,7 +217,10 @@ $env:BULUTSKAN_GRYPE_VALIDATE_AGE = "false"
 bulutskan scan --iac bulutskan\resources\iac --json data\sinov_iac.json
 ```
 
-Chiqishda `DIQQAT: tekshiruv qisman` degan sariq yozuv bo‘lmasligi kerak. Bu yozuv biror vosita ishlamay qolganini bildiradi: unda ground truth natijasi to‘liq emas deb belgilanadi va III bob bilan solishtirilmaydi.
+Chiqishda `DIQQAT: tekshiruv qisman` degan sariq yozuv bo‘lmasligi kerak, oxirgi qatorda esa `Chiqish kodi 0` chiqadi. Biror vosita ishlamay qolsa:
+- `Ishlamagan vositalar:` bo‘limida qaysi vosita va nima sababdan ishlamagani ko‘rsatiladi (masalan, `checkov — Sxemasiz proksi o‘zgaruvchisi [proxy_scheme, chiqish kodi 2]`);
+- ground truth natijasi to‘liq emas deb belgilanadi va III bob bilan solishtirilmaydi;
+- chiqish kodi 2 bo‘ladi. Qisman natijani ataylab qabul qilish uchun `--allow-partial` qo‘shiladi.
 
 Kutilgan natija (IaC tekshiruvi bazaga bog‘liq emas, shuning uchun raqamlar aynan bir xil bo‘lishi kerak):
 

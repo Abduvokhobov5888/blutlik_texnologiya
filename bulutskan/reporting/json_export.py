@@ -14,8 +14,9 @@ from typing import Any
 from bulutskan import __version__
 from bulutskan.core.consensus import ConsensusGroup, ConsensusLabel
 from bulutskan.core.eol import EOL_WARNING_EN, EOL_WARNING_UZ
-from bulutskan.core.gate import GateDecision, UnknownSeverityPolicy, ci_severity, severity_label
+from bulutskan.core.gate import ExitDecision, GateDecision, UnknownSeverityPolicy, ci_severity, severity_label
 from bulutskan.core.models import Finding, Severity
+from bulutskan.scanner.runs import FAILURE_CODES
 from bulutskan.services.pipeline import ScanOutcome
 
 SCHEMA_VERSION = 1
@@ -85,6 +86,7 @@ def build_export(
     policy: UnknownSeverityPolicy,
     gate: GateDecision | None = None,
     lang: str = "uz",
+    exit_decision: ExitDecision | None = None,
 ) -> dict[str, Any]:
     """Eksport uchun lug‘at."""
     consensus = outcome.consensus
@@ -105,6 +107,19 @@ def build_export(
             "image": outcome.image,
         },
         "tools": [r.to_dict() for r in outcome.tool_runs],
+        # Qaysi vosita nima sababdan ishlamagani (qisman tekshiruvda).
+        "failures": [
+            {
+                "tool": r.tool.value,
+                "reason_code": r.reason_code or "exit_code",
+                "reason_title": FAILURE_CODES.get(r.reason_code or "exit_code", r.reason_code or "exit_code"),
+                "returncode": r.returncode,
+                "error": r.error,
+                "duration_s": round(r.duration_s, 2),
+            }
+            for r in outcome.tool_runs
+            if not r.ok
+        ],
         "integrity": outcome.integrity,
         "severity_table": outcome.severity_table(),
         "unknown_severity_policy": policy.value,
@@ -148,6 +163,13 @@ def build_export(
             "counted": len(gate.counted),
             "counted_unknown": gate.unknown_counted,
             "notes": gate.notes,
+        }
+    if exit_decision is not None:
+        data["exit"] = {
+            "code": exit_decision.code,
+            "reason": exit_decision.reason,
+            "partial": exit_decision.partial,
+            "allow_partial": exit_decision.allow_partial,
         }
     data["findings"] = [
         _finding(f, policy, lang) for r in outcome.tool_runs if r.report is not None for f in r.report.findings

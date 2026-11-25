@@ -59,6 +59,14 @@ def explain_failure(res: RunResult) -> str:
         return "Xotira yetmadi (chiqish kodi 137): BULUTSKAN_CONTAINER_MEMORY ni oshiring"
     if res.returncode == 125:
         return "Docker konteynerni ishga tushira olmadi: " + _tail(res.stderr_text)
+    if "ProxySchemeUnknown" in res.stderr_text or "Proxy URL had no scheme" in res.stderr_text:
+        return (
+            "Konteynerga sxemasiz (http:// siz) proksi o‘zgaruvchisi o‘tgan, Checkov uni o‘qiy olmadi. "
+            "BulutSkan tarmoqsiz konteynerlarga proksi bermaydi: o‘zgaruvchini Docker o‘zi qo‘shgan. "
+            "Docker Desktop → Settings → Resources → Proxies (yoki ~/.docker/config.json dagi \"proxies\") "
+            "manzilini http:// bilan yozing. Chiqish kodi "
+            f"{res.returncode}: " + _tail(res.stderr_text, 400)
+        )
     return f"Chiqish kodi {res.returncode}: " + _tail(res.stderr_text)
 
 

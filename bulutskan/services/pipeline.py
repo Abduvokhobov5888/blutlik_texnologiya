@@ -70,6 +70,11 @@ class ScanOutcome:
     source: str = "cli"
 
     @property
+    def failed_tools(self) -> list[Tool]:
+        """Ishlamay qolgan vositalar (qisman natija)."""
+        return [r.tool for r in self.tool_runs if not r.ok]
+
+    @property
     def reports(self) -> dict[Tool, ToolReport]:
         """Muvaffaqiyatli ishlagan vositalar hisobotlari."""
         return {r.tool: r.report for r in self.tool_runs if r.ok and r.report is not None}

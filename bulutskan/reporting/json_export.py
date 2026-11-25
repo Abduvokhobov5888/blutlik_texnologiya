@@ -135,6 +135,9 @@ def build_export(
             },
             "overlap": ev.overlap,
             "missed_by_all": list(ev.missed_by_all),
+            # Biror vosita ishlamagan bo‘lsa, natija III bob bilan solishtirilmaydi.
+            "complete": not outcome.failed_tools,
+            "tools_failed": [t.value for t in outcome.failed_tools],
         }
     if gate is not None:
         data["gate"] = {

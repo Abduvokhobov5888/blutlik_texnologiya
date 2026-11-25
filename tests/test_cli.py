@@ -137,3 +137,26 @@ def test_db_update_and_status(fake: FakeDocker) -> None:
 def test_version() -> None:
     res = runner.invoke(cli.app, ["--version"])
     assert res.exit_code == 0 and "BulutSkan" in res.output
+
+
+def test_partial_iac_scan_is_clearly_marked(fake: FakeDocker, tmp_path: Path) -> None:
+    """Checkov ishlamasa, "hech kim topmagan" ro‘yxati to‘liq emas deb belgilanadi."""
+    fake.fail[Tool.CHECKOV] = (2, "ProxySchemeUnknown: Proxy URL had no scheme")
+    out = tmp_path / "qisman.json"
+    res = _run("scan", "--iac", IAC, "--json", str(out))
+    assert "DIQQAT: tekshiruv qisman" in res.output
+    assert "III bob bilan solishtirib bo‘lmaydi" in res.output
+    assert "Ishlagan vositalar (KICS, Trivy (config)) orasida hech biri topmagan" in res.output
+    assert "sxemasiz" in res.output  # tushunarli xato izohi
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["ground_truth"]["complete"] is False
+    assert data["ground_truth"]["tools_failed"] == ["checkov"]
+
+
+def test_full_iac_scan_is_complete(fake: FakeDocker, tmp_path: Path) -> None:
+    out = tmp_path / "toliq.json"
+    res = _run("scan", "--iac", IAC, "--json", str(out))
+    assert "DIQQAT" not in res.output
+    assert "Hech bir vosita topmagan: DF-03, K8S-09" in res.output
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["ground_truth"]["complete"] is True

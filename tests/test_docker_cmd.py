@@ -62,15 +62,41 @@ def test_scanned_files_are_mounted_read_only(tmp_path: Path) -> None:
     assert "-v" not in cmd and "--volume" not in cmd
 
 
-def test_proxy_variables_are_blanked_without_network(tmp_path: Path) -> None:
+def test_no_proxy_variables_without_network(tmp_path: Path) -> None:
+    """Tarmoqsiz konteynerga proksi o‘zgaruvchisi umuman berilmaydi, bo‘sh qiymat bilan ham.
+
+    Windows’dagi sinovda bo‘sh ``https_proxy=`` Checkov 3.3.26 ni
+    ``ProxySchemeUnknown`` bilan yiqitgan: Checkov ``os.environ['https_proxy']``
+    ni o‘qiydi va faqat o‘zgaruvchi yo‘q bo‘lsa proksisiz ishlaydi.
+    ``run_tests.ps1`` ham bu o‘zgaruvchilarni bermagan.
+    """
     cmd = build_run_command("docker", _spec(tmp_path))
     envs = [cmd[i + 1] for i, c in enumerate(cmd) if c == "--env"]
-    for var in PROXY_VARS:
-        assert f"{var}=" in envs
-    assert "HOME=/tmp" in envs
+    names = {e.split("=", 1)[0] for e in envs}
+    assert not names & set(PROXY_VARS)
+    assert not any(e.lower().startswith(("http_proxy", "https_proxy", "no_proxy")) for e in envs)
+    assert envs == ["HOME=/tmp"]
     # Har bir --env qiymati KALIT=qiymat ko‘rinishida: xost qiymati o‘tib ketmaydi.
     assert all("=" in e for e in envs)
     assert "--env-file" not in cmd
+
+
+@pytest.mark.parametrize("var", PROXY_VARS)
+def test_proxy_cannot_be_passed_to_offline_container(tmp_path: Path, var: str) -> None:
+    with pytest.raises(ValueError, match="proksi"):
+        build_run_command("docker", _spec(tmp_path, env={var: "http://proxy:3128"}))
+
+
+def test_checkov_proxy_error_is_explained() -> None:
+    from bulutskan.scanner.docker import RunResult
+    from bulutskan.scanner.runs import explain_failure
+
+    stderr = (
+        b'File "/usr/local/lib/python3.12/site-packages/checkov/main.py", line 306\n'
+        b"urllib3.exceptions.ProxySchemeUnknown: Proxy URL had no scheme, should start with http:// or https://"
+    )
+    msg = explain_failure(RunResult(["docker", "run"], 2, b"", stderr, 1.0))
+    assert "sxemasiz" in msg and "http://" in msg and "Proxies" in msg
 
 
 def test_bridge_network_keeps_given_proxy(tmp_path: Path) -> None:

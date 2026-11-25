@@ -103,6 +103,15 @@ class FakeDocker:
         return out
 
     @staticmethod
+    def _envs(argv: Sequence[str]) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for i, token in enumerate(argv):
+            if token == "--env":
+                key, _, value = argv[i + 1].partition("=")
+                out[key] = value
+        return out
+
+    @staticmethod
     def _ok(argv: Sequence[str], stdout: bytes = b"", code: int = 0, stderr: bytes = b"") -> RunResult:
         return RunResult(list(argv), code, stdout, stderr, 0.01)
 
@@ -164,6 +173,16 @@ class FakeDocker:
             return self._ok(argv, code=1, stderr=b"FATAL: failed to open db: open /tmp/trivy/db/trivy.db: read-only file system")
 
         if tool is Tool.CHECKOV:
+            # Checkov 3.3.26 kabi: https_proxy bor-u, lekin sxemasiz (yoki bo‘sh) bo‘lsa yiqiladi
+            # (platform_integration.py, setup_http_manager → urllib3.ProxyManager).
+            https_proxy = self._envs(argv).get("https_proxy")
+            if https_proxy is not None and not https_proxy.startswith(("http://", "https://")):
+                return self._ok(
+                    argv,
+                    code=2,
+                    stderr=b"urllib3.exceptions.ProxySchemeUnknown: Proxy URL had no scheme, "
+                    b"should start with http:// or https://",
+                )
             report = (IAC_RUN / "checkov" / "results_json.json").read_text(encoding="utf-8-sig")
             (mounts["/out"][0] / "results_json.json").write_text(report.replace('"/iac/', '"/scan/'), encoding="utf-8")
             return self._ok(argv, code=1)

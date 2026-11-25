@@ -711,7 +711,7 @@ docker run --rm --pull never
   --security-opt no-new-privileges
   --cpus 2 --memory 2g --memory-swap 2g --pids-limit 512
   --env HOME=/tmp
-  --env HTTP_PROXY= --env HTTPS_PROXY= --env NO_PROXY= (va kichik harfli nusxalari)
+  (proksi o‘zgaruvchilari berilmaydi — pastdagi izohga qarang)
   --mount type=bind,source={workdir}/input,target=/scan,readonly        # IaC
   --mount type=bind,source={image.tar},target=/input/image.tar,readonly # obraz
   aquasec/trivy@sha256:{digest}
@@ -721,7 +721,8 @@ docker run --rm --pull never
 Izohlar:
 
 - `--pull never` digest bo‘yicha obraz kompyuterda yo‘q bo‘lsa, Docker uni jimgina yuklab olishiga yo‘l qo‘ymaydi.
-- Bo‘sh `HTTP_PROXY=` qiymatlari Docker CLI ning `config.json` dagi proksini konteynerga avtomatik uzatishini bekor qiladi. Tarmoq baribir yo‘q, lekin proksi manzili konteyner ichida ham ko‘rinmaydi.
+- **Tarmoqsiz konteynerga proksi o‘zgaruvchilari umuman berilmaydi, bo‘sh qiymat bilan ham.** Dastlabki rejada ular `HTTP_PROXY=` kabi bo‘sh qiymat bilan bekor qilinardi. Windows’dagi sinovda aynan shu Checkov’ni yiqitdi. Checkov 3.3.26 `os.environ['https_proxy']` ni o‘qiydi va faqat o‘zgaruvchi yo‘q bo‘lsa proksisiz ishlaydi (`platform_integration.py`, `setup_http_manager`). Bo‘sh yoki sxemasiz qiymat `urllib3.ProxyManager` ni `ProxySchemeUnknown` bilan yiqitadi, chiqish kodi 2. Bu Checkov 3.3.26 bilan qayta chiqarib tekshirildi: o‘zgaruvchisiz 102 ta topilma va 36/40, bo‘sh qiymat bilan esa 2 kodi. `run_tests.ps1` ham bu o‘zgaruvchilarni bermagan. Endi `build_run_command` tarmoqsiz konteynerga proksi o‘zgaruvchisi berilishini umuman rad etadi.
+- Docker Desktop yoki `~/.docker/config.json` o‘z proksisini konteynerga qo‘shishi mumkin, platforma buni bekor qila olmaydi. `--network none` da bu manzil baribir ishlatilmaydi. Agar qo‘shilgan qiymat sxemasiz bo‘lsa va Checkov yiqilsa, xato matni buni tushuntiradi va uni Docker sozlamasida `http://` bilan yozishni maslahat beradi.
 - `-v` o‘rniga `--mount` ishlatiladi: Windows yo‘lidagi `D:` ikki nuqtasi `-v` sintaksisini buzadi. Yo‘lda vergul yoki qo‘shtirnoq bo‘lsa, tekshiruv xato bilan to‘xtaydi.
 - Konteynerga muhit o‘zgaruvchisi faqat `KALIT=qiymat` ko‘rinishida beriladi. `docker` jarayonining o‘ziga ham xost muhitidan faqat zarur o‘zgaruvchilar (`PATH`, `DOCKER_HOST`, Windows tizim o‘zgaruvchilari) o‘tadi.
 - Timeout tugasa, konteyner `docker kill bulutskan-{uid}-{vosita}` bilan to‘xtatiladi. 137 chiqish kodi “xotira yetmadi” deb tushuntiriladi.

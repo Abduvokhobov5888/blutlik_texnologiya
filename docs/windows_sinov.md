@@ -91,7 +91,15 @@ bulutskan --version
 
 Kutilgan natija: `BulutSkan 0.1.0`.
 
-> Keyingi barcha bosqichlar `BulutSkan` papkasida va faollashtirilgan `.venv` bilan bajariladi. Yangi PowerShell oynasi ochilsa, `.\.venv\Scripts\Activate.ps1` ni qayta bajaring.
+O‘zbekcha harflar (`‘`, `’`, `—`) to‘g‘ri chiqishi uchun konsolni UTF-8 ga o‘tkazing:
+
+```powershell
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+```
+
+Busiz Windows PowerShell 5.1 da `bo‘yicha` o‘rniga `boСyicha`, `—` o‘rniga `Ч` chiqishi mumkin. BulutSkan o‘zi har doim UTF-8 da yozadi, bu qator esa PowerShell’ga uni to‘g‘ri o‘qishni aytadi. Qatorni har oynada yozmaslik uchun uni PowerShell profilingizga qo‘shing: `notepad $PROFILE`.
+
+> Keyingi barcha bosqichlar `BulutSkan` papkasida, faollashtirilgan `.venv` bilan bajariladi. Yangi PowerShell oynasi ochilsa, `.\.venv\Scripts\Activate.ps1` va `[Console]::OutputEncoding = [Text.Encoding]::UTF8` ni qayta bajaring.
 
 ## 4. Testlar (Docker’siz)
 
@@ -99,7 +107,7 @@ Kutilgan natija: `BulutSkan 0.1.0`.
 python -m pytest -q
 ```
 
-Kutilgan natija: `363 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
+Kutilgan natija: `388 passed`. Bu testlar Docker’siz ishlaydi va Windows’da ham xuddi shunday o‘tishi kerak.
 
 ## 5. Vositalar yaxlitligi
 
@@ -156,6 +164,8 @@ $env:BULUTSKAN_GRYPE_VALIDATE_AGE = "false"
 ```powershell
 bulutskan scan --iac bulutskan\resources\iac --json data\sinov_iac.json
 ```
+
+Chiqishda `DIQQAT: tekshiruv qisman` degan sariq yozuv bo‘lmasligi kerak. Bu yozuv biror vosita ishlamay qolganini bildiradi: unda ground truth natijasi to‘liq emas deb belgilanadi va III bob bilan solishtirilmaydi.
 
 Kutilgan natija (IaC tekshiruvi bazaga bog‘liq emas, shuning uchun raqamlar aynan bir xil bo‘lishi kerak):
 
@@ -351,6 +361,9 @@ Quyidagilarni matn ko‘rinishida yuboring (proksi manzili chiqqan bo‘lsa, uni
 |---|---|
 | `bulutskan` buyrug‘i topilmadi | `.venv` faollashtirilmagan: `.\.venv\Scripts\Activate.ps1` |
 | `Activate.ps1` ishga tushmaydi | `Set-ExecutionPolicy -Scope Process Bypass` |
+| O‘zbekcha harflar buziladi (`boСyicha`, `Ч`) | `[Console]::OutputEncoding = [Text.Encoding]::UTF8` (3-bosqich) |
+| Checkov: `ProxySchemeUnknown: Proxy URL had no scheme` | BulutSkan tarmoqsiz konteynerlarga proksi o‘zgaruvchisi bermaydi. Xato chiqsa, o‘zgaruvchini Docker o‘zi qo‘shgan: Docker Desktop → Settings → Resources → Proxies (yoki `%USERPROFILE%\.docker\config.json` dagi `proxies`) manzilini `http://` bilan yozing |
+| `db-status` da Grype sanasi `—` | `data\db\grype\6\vulnerability.db` borligini tekshiring. Sana shu fayl ichidan o‘qiladi |
 | `pip` yoki `git` proksi xatosi | `--proxy http://PROKSI:PORT` yoki `git -c http.proxy=…` |
 | `tools verify`: `missing` | `docker images --digests` bilan digestni solishtiring. Obraz yo‘q bo‘lsa: `bulutskan tools pull` |
 | `tools verify`: `mismatch` | Teg boshqa obrazga ko‘rsatmoqda. Menga `docker images --digests` chiqishini yuboring |

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -143,7 +145,7 @@ def update_databases(
             error = "Vaqt tugadi" if res.timed_out else _scrub(res.stderr_text.strip(), proxy) or f"Chiqish kodi {res.returncode}"
         metadata = None
         if ok and name == "grype":
-            metadata = grype_status(client, integrity, settings)
+            metadata = read_grype_metadata(settings.grype_cache) or grype_status(client, integrity, settings)
         elif ok:
             metadata = read_trivy_metadata(settings.trivy_cache / ("db" if name == "trivy" else "java-db"))
         results.append(DbUpdateResult(name, ok, started, _now(), res.duration_s, error, metadata))
@@ -180,6 +182,89 @@ def parse_grype_status_text(text: str) -> dict[str, Any]:
                 value = value.split("?", 1)[0]  # checksum so‘rov qismisiz
             out[key] = value
     return out
+
+
+_GRYPE_METADATA_COLUMNS = ("build_timestamp", "model", "revision", "addition")
+_FRACTION = re.compile(r"(\.\d{6})\d+")
+
+
+def _iso_utc(value: Any) -> str | None:
+    """Vaqt qiymatini ``2026-11-24T06:22:05Z`` ko‘rinishiga keltiradi."""
+    if value is None:
+        return None
+    try:
+        if isinstance(value, (int, float)):
+            dt = datetime.fromtimestamp(float(value), tz=UTC)
+        else:
+            text = str(value).strip().replace(" ", "T", 1)
+            if text.endswith("Z"):
+                text = text[:-1] + "+00:00"
+            text = _FRACTION.sub(r"\1", text)  # nanosekundlar → mikrosekundlar
+            dt = datetime.fromisoformat(text)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+    except (ValueError, OverflowError, OSError):
+        return None
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _quote_identifier(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _sqlite_db_metadata(db_path: Path) -> dict[str, Any] | None:
+    """Grype v6 bazasining ``db_metadata`` jadvali (yig‘ilgan vaqt va sxema).
+
+    Baza faqat o‘qish rejimida (``mode=ro``, ``immutable=1``) ochiladi:
+    hech narsa yozilmaydi, yon fayllar (journal/WAL) yaratilmaydi va ulanish
+    darhol yopiladi (Windows: fayl band bo‘lib qolmaydi).
+    """
+    uri = db_path.resolve().as_uri() + "?mode=ro&immutable=1"
+    try:
+        with closing(sqlite3.connect(uri, uri=True, timeout=1)) as con:
+            tables = [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type = 'table'")]
+            for table in tables:
+                cols = {r[1] for r in con.execute(f"PRAGMA table_info({_quote_identifier(table)})")}
+                if set(_GRYPE_METADATA_COLUMNS) <= cols:
+                    row = con.execute(
+                        f"SELECT {', '.join(_GRYPE_METADATA_COLUMNS)} FROM {_quote_identifier(table)} LIMIT 1"
+                    ).fetchone()
+                    if row is None:
+                        return None
+                    built, model, revision, addition = row
+                    return {"built": _iso_utc(built), "schema": f"v{model}.{revision}.{addition}"}
+    except sqlite3.Error:
+        return None
+    return None
+
+
+def read_grype_metadata(cache_dir: Path) -> dict[str, Any] | None:
+    """Grype bazasi holatini fayllardan o‘qiydi (Docker kerak emas).
+
+    ``grype db status`` ko‘rsatadigan ``Built`` va ``Schema`` qiymatlari
+    ``{cache}/6/vulnerability.db`` ichidagi ``db_metadata`` jadvalidan
+    olinadi (grype v0.121.0: ``grype/db/v6/models.go``, ``DBMetadata``).
+    ``import.json`` dan esa bazaning manbasi va digesti olinadi. Baza boshqa
+    joydan (masalan, ``Sinov\\cache\\grype``) nusxalangan bo‘lsa ham ishlaydi.
+    """
+    for db_path in sorted(Path(cache_dir).glob("*/vulnerability.db"), reverse=True):
+        meta = _sqlite_db_metadata(db_path)
+        if meta is None:
+            continue
+        meta["path"] = f"{db_path.parent.name}/{db_path.name}"
+        import_file = db_path.parent / "import.json"
+        if import_file.is_file():
+            try:
+                info = json.loads(import_file.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError):
+                info = {}
+            if isinstance(info, dict):
+                if info.get("source"):
+                    meta["from"] = str(info["source"]).split("?", 1)[0]
+                if info.get("digest"):
+                    meta["digest"] = str(info["digest"])
+        return meta
+    return None
 
 
 def grype_status(client: DockerClient, integrity: IntegrityReport, settings: Settings) -> dict[str, Any] | None:
@@ -241,7 +326,7 @@ def database_status(settings: Settings) -> dict[str, dict[str, Any]]:
     for name, present, meta in (
         ("trivy", (trivy_db / "trivy.db").is_file(), read_trivy_metadata(trivy_db)),
         ("trivy-java", (java_db / "trivy-java.db").is_file(), read_trivy_metadata(java_db)),
-        ("grype", any(settings.grype_cache.glob("*/vulnerability.db")), None),
+        ("grype", any(settings.grype_cache.glob("*/vulnerability.db")), read_grype_metadata(settings.grype_cache)),
     ):
         entry = state.get(name, {}) if isinstance(state.get(name), dict) else {}
         out[name] = {

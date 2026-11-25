@@ -29,9 +29,18 @@ _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _CONTAINER_NAME = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,127}$")
 _TARGET = re.compile(r"^/[A-Za-z0-9_./-]*$")
 
-#: Skaner konteynerlarida bo‘shatib qo‘yiladigan proksi o‘zgaruvchilari.
-#: Docker CLI ``~/.docker/config.json`` dagi proksini konteynerga o‘zi
-#: qo‘shadi; aniq bo‘sh qiymat buni bekor qiladi.
+#: Proksi o‘zgaruvchilari. Ular faqat bazalarni yangilash konteyneriga
+#: (``network="bridge"``) beriladi.
+#:
+#: Tarmoqsiz skaner konteynerlariga bu o‘zgaruvchilar **umuman berilmaydi**,
+#: hatto bo‘sh qiymat bilan ham. Checkov 3.3.26 proksini
+#: ``os.environ['https_proxy']`` bilan o‘qiydi
+#: (``checkov/common/bridgecrew/platform_integration.py``,
+#: ``setup_http_manager``) va faqat o‘zgaruvchi yo‘q bo‘lsa (``KeyError``)
+#: proksisiz ishlaydi. Bo‘sh qiymat ``urllib3.ProxyManager("")`` ni chaqiradi
+#: va Checkov ``ProxySchemeUnknown`` bilan 2 kodida yiqiladi. Windows’dagi
+#: sinovda aynan shunday bo‘lgan. ``run_tests.ps1`` ham bu o‘zgaruvchilarni
+#: bermagan.
 PROXY_VARS: tuple[str, ...] = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy")
 
 #: ``docker`` jarayoniga beriladigan xost o‘zgaruvchilari.
@@ -115,9 +124,11 @@ def build_run_command(docker_bin: str, spec: ContainerSpec) -> list[str]:
         "--memory-swap", spec.memory,
         "--pids-limit", str(spec.pids),
     ]
-    env: dict[str, str] = {"HOME": "/tmp"}
     if spec.network == "none":
-        env.update({name: "" for name in PROXY_VARS})
+        leaked = sorted(set(spec.env) & set(PROXY_VARS))
+        if leaked:
+            raise ValueError(f"Tarmoqsiz konteynerga proksi o‘zgaruvchisi berilmaydi: {', '.join(leaked)}")
+    env: dict[str, str] = {"HOME": "/tmp"}
     env.update(spec.env)
     for key, value in env.items():
         if not _ENV_NAME.fullmatch(key):

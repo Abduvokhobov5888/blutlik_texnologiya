@@ -42,6 +42,8 @@ def _assert_isolated(cmd: list[str]) -> None:
     assert ("--cap-drop", "ALL") in pairs
     assert ("--security-opt", "no-new-privileges") in pairs
     assert "--read-only" in cmd and "--rm" in cmd
+    envs = [cmd[i + 1].split("=", 1)[0] for i, c in enumerate(cmd) if c == "--env"]
+    assert not {e.lower() for e in envs} & {"http_proxy", "https_proxy", "no_proxy"}
     assert any(t.startswith("aquasec/") or t.startswith("anchore/") or t.startswith("checkmarx/") or t == CHECKOV_ID
                for t in cmd)
     # Teg bilan chaqirilmaydi: faqat digest yoki obraz ID.
@@ -189,3 +191,23 @@ def test_existing_tar_is_mounted_without_pull(fake: FakeDocker, tmp_path: Path) 
     trivy = fake.run_for(Tool.TRIVY)[0]
     assert f"type=bind,source={tar},target=/input/image.tar,readonly" in _mounts(trivy)
     assert outcome.eol is not None and outcome.eol.is_eol
+
+
+def test_fake_checkov_rejects_empty_proxy_like_real_checkov(fake: FakeDocker) -> None:
+    """Soxta Checkov ham haqiqiysi kabi bo‘sh https_proxy da yiqiladi: regressiya qopqoni."""
+    from bulutskan.scanner.docker import DockerClient as Client
+
+    argv = ["docker", "run", "--env", "https_proxy=", CHECKOV_ID, "-d", "/scan"]
+    res = fake.run(argv, timeout=5)
+    assert res.returncode == 2 and b"ProxySchemeUnknown" in res.stderr
+    assert isinstance(Client(fake), Client)
+
+
+def test_checkov_runs_in_iac_scan_and_finds_tf20(fake: FakeDocker) -> None:
+    """Windows’dagi xato: Checkov ishlamasa TF-20 "hech kim topmagan" ro‘yxatiga tushib qolardi."""
+    outcome = _scanner(fake).scan_iac_directory(DEFAULT_IAC_ROOT)
+    checkov = next(r for r in outcome.tool_runs if r.tool is Tool.CHECKOV)
+    assert checkov.ok, checkov.error
+    assert outcome.gt_evaluation is not None
+    assert "TF-20" in outcome.gt_evaluation.tools["Checkov"].detected_ids
+    assert list(outcome.gt_evaluation.missed_by_all) == ["DF-03", "K8S-09"]

@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from pathlib import Path
 
 import pytest
 
@@ -109,3 +110,92 @@ def test_experiment_metadata_files_are_readable(tmp_path) -> None:
     assert status["schema"] == "v6.1.10"
     assert status["built"] == "2026-11-24T06:22:05Z"
     assert "checksum" not in status["from"]
+
+
+def _grype_v6_db(cache: Path, built: object = "2026-11-24 06:22:05+00:00", with_import: bool = True) -> Path:
+    """Grype v6 bazasining metama’lumot qismi (grype v0.121.0 models.go dagi DBMetadata jadvali)."""
+    import sqlite3
+    from contextlib import closing
+
+    d = cache / "6"
+    d.mkdir(parents=True)
+    db = d / "vulnerability.db"
+    with closing(sqlite3.connect(db)) as con:
+        con.execute(
+            "CREATE TABLE db_metadata (build_timestamp datetime NOT NULL, model integer NOT NULL, "
+            "revision integer NOT NULL, addition integer NOT NULL)"
+        )
+        con.execute("CREATE TABLE vulnerability_handles (id integer PRIMARY KEY, name text)")
+        con.execute("INSERT INTO db_metadata VALUES (?, 6, 1, 10)", (built,))
+        con.commit()
+    if with_import:
+        (d / "import.json").write_text(
+            json.dumps(
+                {
+                    "digest": "xxh64:0123456789abcdef",
+                    "source": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_"
+                    "2026-11-24T00:20:31Z_1795501325.tar.zst?checksum=sha256%3Afdf0",
+                    "client_version": "6.1.10",
+                }
+            ),
+            encoding="utf-8",
+        )
+    return db
+
+
+def test_grype_metadata_is_read_from_copied_database(settings) -> None:
+    """Sinov\\cache\\grype dan nusxalangan baza: sana grype db status bilan bir xil chiqadi."""
+    from bulutskan.scanner.dbupdate import read_grype_metadata
+
+    _grype_v6_db(settings.grype_cache)
+    meta = read_grype_metadata(settings.grype_cache)
+    expected = parse_grype_status_text((NATIJALAR / "grype_db_status.txt").read_text(encoding="utf-8-sig"))
+    assert meta is not None
+    assert meta["built"] == expected["built"] == "2026-11-24T06:22:05Z"
+    assert meta["schema"] == expected["schema"] == "v6.1.10"
+    assert meta["path"] == "6/vulnerability.db"
+    assert meta["from"].endswith(".tar.zst") and "checksum" not in meta["from"]
+
+    status = database_status(settings)
+    assert status["grype"]["present"] is True
+    assert status["grype"]["metadata"]["built"] == "2026-11-24T06:22:05Z"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("2026-11-24 06:22:05+00:00", "2026-11-24T06:22:05Z"),
+        ("2026-11-24 06:22:05.123456789+00:00", "2026-11-24T06:22:05Z"),
+        ("2026-11-24T11:22:05+05:00", "2026-11-24T06:22:05Z"),
+        ("2026-11-24T06:22:05Z", "2026-11-24T06:22:05Z"),
+        ("2026-11-24 06:22:05", "2026-11-24T06:22:05Z"),
+        (1795501325, "2026-11-24T06:22:05Z"),
+    ],
+)
+def test_grype_build_timestamp_formats(settings, raw: object, expected: str) -> None:
+    from bulutskan.scanner.dbupdate import read_grype_metadata
+
+    _grype_v6_db(settings.grype_cache, built=raw, with_import=False)
+    meta = read_grype_metadata(settings.grype_cache)
+    assert meta is not None and meta["built"] == expected
+
+
+def test_grype_metadata_handles_missing_or_broken_db(settings) -> None:
+    from bulutskan.scanner.dbupdate import read_grype_metadata
+
+    assert read_grype_metadata(settings.grype_cache) is None
+    d = settings.grype_cache / "6"
+    d.mkdir(parents=True)
+    (d / "vulnerability.db").write_bytes(b"bu sqlite emas" * 50)
+    assert read_grype_metadata(settings.grype_cache) is None
+
+
+def test_grype_metadata_read_does_not_modify_or_lock_db(settings) -> None:
+    from bulutskan.scanner.dbupdate import read_grype_metadata
+
+    db = _grype_v6_db(settings.grype_cache)
+    before = db.read_bytes()
+    assert read_grype_metadata(settings.grype_cache) is not None
+    assert db.read_bytes() == before
+    assert sorted(p.name for p in db.parent.iterdir()) == ["import.json", "vulnerability.db"]
+    db.unlink()  # Windows qoidasi: fayl yopilgan bo‘lishi kerak

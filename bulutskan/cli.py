@@ -13,8 +13,11 @@ Chiqish kodlari: 0 — chegaradan oshmadi; 1 — chegaradan oshdi;
 
 from __future__ import annotations
 
+import sys
+from collections.abc import Iterable
 from enum import StrEnum
 from pathlib import Path
+from typing import TextIO
 
 import typer
 
@@ -44,6 +47,34 @@ from bulutskan.services.pipeline import Scanner, ScanOutcome, ScanStatus
 EXIT_OK = 0
 EXIT_THRESHOLD = 1
 EXIT_ERROR = 2
+
+
+def configure_utf8_output(streams: Iterable[TextIO] | None = None) -> None:
+    """Chiqishni UTF-8 ga o‘tkazadi.
+
+    Windows PowerShell 5.1 da chiqish quvur orqali o‘tsa (masalan,
+    ``| Tee-Object``), Python ANSI kodlashida (cp1251) yozadi, PowerShell esa
+    uni OEM kodlashi (cp866) deb o‘qiydi: ``bo‘yicha`` → ``boСyicha``,
+    ``—`` → ``Ч``. Shuning uchun CLI har doim UTF-8 da yozadi; PowerShell
+    tomonida ``[Console]::OutputEncoding = [Text.Encoding]::UTF8`` kerak
+    (``docs/windows_sinov.md``). Kodlashda yo‘q belgi xato bermaydi, ``?``
+    bilan almashtiriladi.
+    """
+    for stream in streams if streams is not None else (sys.stdout, sys.stderr):
+        encoding = (getattr(stream, "encoding", None) or "").lower().replace("-", "").replace("_", "")
+        if encoding == "utf8":
+            continue
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass
+
+
+# ``bulutskan`` buyrug‘i ``bulutskan.cli:app`` ga ishora qiladi, shuning uchun
+# sozlash modul yuklanganda, Typer biror narsa chiqarishidan oldin bajariladi.
+configure_utf8_output()
 
 app = typer.Typer(
     name="bulutskan",
@@ -153,14 +184,29 @@ def _print_outcome(outcome: ScanOutcome, policy: UnknownSeverityPolicy) -> None:
             typer.echo(f"  Jaccard {label}: {_num(value)}")
         if c.jaccard_core is not None:
             typer.echo(f"  Asosiy Jaccard (CVE, CPE’siz): {_num(c.jaccard_core)}")
+    failed = [t.value for t in outcome.failed_tools]
+    if failed and outcome.status != "failed":
+        typer.secho(
+            f"\nDIQQAT: tekshiruv qisman — ishlamagan vosita: {', '.join(failed)}. "
+            "Konsensus va Jaccard faqat ishlagan vositalar bo‘yicha hisoblandi.",
+            fg=typer.colors.YELLOW,
+            bold=True,
+        )
     if outcome.gt_evaluation is not None:
         typer.echo("\nGround truth bo‘yicha (namoyish fayllari, III bob usuli):")
+        if failed:
+            typer.secho(
+                f"  Natija to‘liq emas: {', '.join(failed)} ishlamadi, shuning uchun uni III bob bilan solishtirib bo‘lmaydi.",
+                fg=typer.colors.YELLOW,
+            )
         for name, ev in outcome.gt_evaluation.tools.items():
             typer.echo(f"  {name:15} {ev.tp}/{ev.gt}  recall={_num(ev.recall)}  precision={_num(ev.precision)}  FP={ev.fp}")
         for pair, info in outcome.gt_evaluation.overlap.items():
             typer.echo(f"  Jaccard {pair}: {_num(info['jaccard'])}")
         if outcome.gt_evaluation.missed_by_all:
-            typer.echo("  Hech bir vosita topmagan: " + ", ".join(outcome.gt_evaluation.missed_by_all))
+            ran = ", ".join(outcome.gt_evaluation.tools)
+            label = f"Ishlagan vositalar ({ran}) orasida hech biri topmagan" if failed else "Hech bir vosita topmagan"
+            typer.echo(f"  {label}: " + ", ".join(outcome.gt_evaluation.missed_by_all))
 
 
 def _print_gate(gate: GateDecision) -> None:
@@ -277,7 +323,10 @@ def db_status() -> None:
         meta = info.get("metadata") or {}
         built = meta.get("UpdatedAt") or meta.get("built") or "—"
         present = "bor" if info["present"] else "YO‘Q"
-        typer.echo(f"{info['label']:22} {present:4}  baza sanasi: {built}  yangilangan: {info.get('updated_at') or '—'}")
+        schema = f"  sxema: {meta['schema']}" if meta.get("schema") else ""
+        typer.echo(
+            f"{info['label']:22} {present:4}  baza sanasi: {built}{schema}  yangilangan: {info.get('updated_at') or '—'}"
+        )
 
 
 # --------------------------------------------------------------- tools

@@ -7,6 +7,7 @@ va unga o‘xshash barcha yo‘llar alohida tekshiriladi.
 """
 
 import io
+import stat
 import zipfile
 from pathlib import Path
 
@@ -129,9 +130,13 @@ def test_remove_tree_gives_up_without_raising(tmp_path: Path, monkeypatch: pytes
     monkeypatch.setattr(workspace_module.time, "sleep", lambda s: None)
     d = tmp_path / "ish"
     d.mkdir()
+    mode = stat.S_IMODE(d.stat().st_mode)
     with (d / "band.tf").open("w"):
         assert remove_tree(d, attempts=3) is False
         assert d.exists()
+    # Regressiya: xato ishlovchisi katalogga 0600 qo‘yib, bajarish bitini olib
+    # tashlagan edi; root bo‘lmagan foydalanuvchida keyingi urinish ham yiqilardi.
+    assert stat.S_IMODE(d.stat().st_mode) & mode == mode
     assert remove_tree(d) is True
 
 

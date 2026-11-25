@@ -39,10 +39,16 @@ def _clear_readonly_and_retry(func: Callable[..., object], path: str, exc: BaseE
     boshqa jarayonda ochiq — WinError 32) yuqoriga uzatiladi va
     :func:`remove_tree` ularni kutib, qayta urinadi.
     """
-    if not isinstance(exc, PermissionError):
+    # Faqat o‘chirish amallari qayta uriniladi. ``os.scandir``, ``os.open`` va
+    # ``os.lstat`` ni qayta chaqirish xatoni jimgina yutib yuborardi.
+    if not isinstance(exc, PermissionError) or func not in (os.unlink, os.remove, os.rmdir):
         raise exc
     try:
-        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+        # Joriy ruxsatlarga faqat yozish biti qo‘shiladi. Katalogdan bajarish
+        # (x) biti olib tashlansa, Linux’da (root bo‘lmagan foydalanuvchida)
+        # uning ichidagi fayllarni o‘chirib bo‘lmay qoladi.
+        mode = stat.S_IMODE(os.lstat(path).st_mode)
+        os.chmod(path, mode | stat.S_IWRITE | stat.S_IREAD)
     except OSError:
         raise exc from None
     func(path)

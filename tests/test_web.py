@@ -595,3 +595,14 @@ def test_docker_desktop_path_fallback(tmp_path: Path, monkeypatch: pytest.Monkey
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(shutil, "which", lambda name: None)
     assert config.default_docker_bin() == "docker"
+
+
+def test_footer_text(admin: TestClient) -> None:
+    from bulutskan import __version__
+
+    page = admin.get("/").text
+    expected = f"Ma’lumotlar O‘zbekiston hududidan chiqmaydi · BulutSkan {__version__} · Andijon davlat universiteti</footer>"
+    assert expected in page
+    token = csrf(admin, "/")
+    admin.post("/lang", data={"lang": "en", "next": "/", "csrf_token": token})
+    assert f"BulutSkan {__version__} · Andijan State University</footer>" in admin.get("/").text

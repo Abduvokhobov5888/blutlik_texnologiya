@@ -1,0 +1,84 @@
+# BulutSkan: GitHub Actions namunasi.
+#
+# Faylni o‘z loyihangizga .github/workflows/bulutskan.yml nomi bilan nusxalang.
+# Konveyer IaC fayllarini (infra/) va yig‘ilgan obrazni tekshiradi:
+#   chiqish kodi 0 — chegaradan oshmadi,
+#               1 — --fail-on darajasidagi topilma bor (konveyer to‘xtaydi),
+#               2 — biror vosita ishlamadi (qisman natija; istisno: --allow-partial).
+# Hisobotlar (JSON va DOCX) artefakt sifatida saqlanadi.
+
+name: bulutskan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  BULUTSKAN_DATA_DIR: ${{ github.workspace }}/.bulutskan
+  # O‘rnatiladigan versiya: tegni qotiring (main emas).
+  BULUTSKAN_REF: v1.0.0
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: BulutSkan’ni o‘rnatish
+        run: pip install "bulutskan @ git+https://github.com/Abduvokhobov5888/blutlik_texnologiya@${BULUTSKAN_REF}"
+
+      # Zaifliklar bazalari kuniga bir marta yangilanadi, qolgan ishga tushirishlarda keshdan olinadi.
+      - name: Bazalar keshi
+        id: day
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.BULUTSKAN_DATA_DIR }}/db
+          key: bulutskan-db-${{ steps.day.outputs.date }}
+          restore-keys: bulutskan-db-
+
+      - name: Vositalar (faqat sha256 digest bo‘yicha)
+        run: |
+          bulutskan tools pull
+          # Checkov’ning rasmiy obrazi yo‘q: Dockerfile’dan yig‘iladi va ID si qulflanadi.
+          # Doimiy runner’da qulf fayli (.bulutskan/tool_lock.json) saqlansa, keyingi
+          # ishga tushirishlar o‘sha obrazga ishonadi (birinchi ishonch tamoyili).
+          bulutskan tools build-checkov
+          bulutskan tools lock-checkov
+          bulutskan tools verify
+
+      - name: Zaifliklar bazalari
+        run: bulutskan db-update
+
+      - name: IaC tekshiruvi
+        run: >
+          bulutskan scan --iac infra
+          --fail-on high
+          --json hisobot/iac.json --docx hisobot/iac.docx
+
+      - name: Obrazni yig‘ish
+        run: docker build -t ilova:${{ github.sha }} .
+
+      - name: Obraz tekshiruvi
+        run: |
+          docker save ilova:${{ github.sha }} -o ilova.tar
+          bulutskan scan --image-tar ilova.tar --image-name ilova:${{ github.sha }} \
+            --fail-on critical --fixable-only \
+            --json hisobot/obraz.json --docx hisobot/obraz.docx
+
+      - name: Hisobotlar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bulutskan-hisobot
+          path: hisobot/
+          retention-days: 30

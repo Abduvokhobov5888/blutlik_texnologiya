@@ -54,6 +54,7 @@ from bulutskan.security.validators import InvalidImageReference
 from bulutskan.security.passwords import WeakPassword
 from bulutskan.services import audit
 from bulutskan.services.demo import demo_available, import_demo
+from bulutskan.services.history import docx_for, docx_from_outcome, record_outcome, write_docx
 from bulutskan.services.pipeline import Scanner, ScanOutcome, ScanStatus
 from bulutskan.services.users import UserError, add_user, disable_user, enable_user, get_user, set_password
 from bulutskan.storage.db import Database
@@ -263,6 +264,8 @@ def scan(
         False, "--allow-partial",
         help="Biror vosita ishlamasa ham natijani qabul qilish. Sukut bo‘yicha qisman tekshiruv 2 kodi bilan tugaydi.",
     ),
+    docx_out: Path | None = typer.Option(None, "--docx", help="DOCX hisobotni faylga yozish."),
+    save: bool = typer.Option(False, "--save", help="Natijani tekshiruvlar tarixiga yozish (veb-interfeysda ko‘rinadi)."),
 ) -> None:
     """IaC katalogi yoki konteyner obrazini tekshirish."""
     chosen = [x for x in (iac, image, image_tar) if x is not None]
@@ -295,6 +298,7 @@ def scan(
     if json_out is not None:
         write_export(json_out, build_export(outcome, policy, gate, exit_decision=decision))
         typer.echo(f"\nJSON: {json_out}")
+    _save_and_report(settings, outcome, save, docx_out)
     if outcome.status == ScanStatus.FAILED and outcome.error:
         _err(outcome.error)
     _print_failures(outcome)
@@ -303,6 +307,23 @@ def scan(
     color = typer.colors.RED if decision.code else typer.colors.GREEN
     typer.secho(f"\nChiqish kodi {decision.code}: {decision.reason}", fg=color, bold=True, err=decision.code == EXIT_ERROR)
     raise typer.Exit(decision.code)
+
+
+def _save_and_report(settings: Settings, outcome: ScanOutcome, save: bool, docx_out: Path | None) -> None:
+    """``--save`` — tarixga yozish; ``--docx`` — hisobot (tarixsiz bo‘lsa vaqtinchalik bazadan)."""
+    if save:
+        db = open_db(settings)
+        try:
+            uid = record_outcome(db, outcome, source="cli")
+            typer.echo(f"Tarixga yozildi: {uid}")
+            if docx_out is not None:
+                write_docx(docx_out, docx_for(db, uid))
+        finally:
+            db.dispose()
+    elif docx_out is not None:
+        write_docx(docx_out, docx_from_outcome(outcome))
+    if docx_out is not None:
+        typer.echo(f"DOCX: {docx_out}")
 
 
 def _print_failures(outcome: ScanOutcome) -> None:
